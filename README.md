@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VendeMóvil
 
-## Getting Started
+Sistema POS web responsive para pequeños y medianos negocios en Perú.
+**"Tu negocio, tus ventas, desde cualquier navegador."**
 
-First, run the development server:
+## Stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS 4 · Prisma 7 (driver adapter `@prisma/adapter-pg`) · PostgreSQL (Neon) · NextAuth v4 (Credentials + JWT) · Zod · React Hook Form · Recharts · jsPDF · SheetJS (xlsx) · BarcodeDetector API con fallback `@zxing/browser`.
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env   # completar DATABASE_URL, DATABASE_URL_UNPOOLED, NEXTAUTH_SECRET
+npx prisma migrate deploy   # o `prisma migrate dev` en desarrollo
+npx prisma db seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`DATABASE_URL` debe ser la conexión **pooled** de Neon (usada en runtime); `DATABASE_URL_UNPOOLED` la conexión **directa** (usada por Prisma CLI para migraciones — ver `prisma.config.ts`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Genera `NEXTAUTH_SECRET` con:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
 
-## Learn More
+## Usuario administrador de prueba (sembrado)
 
-To learn more about Next.js, take a look at the following resources:
+```
+admin@vendemovil.pe / Admin123!
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Cámbiala desde `/usuarios` (o pide a otro admin que la restablezca) antes de usar el sistema en producción.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roles
 
-## Deploy on Vercel
+| Rol | Puede |
+|---|---|
+| **Administrador** | Todo — productos, usuarios, caja de configuración, anular ventas, ver todas las ventas. |
+| **Vendedor** | Vender en el POS, ver/crear/editar clientes, ver solo sus propias ventas, ver inventario/productos (sin editar). |
+| **Cajero** | Mismo set de permisos que Vendedor en este MVP — el rol existe como placeholder hasta que se construya el módulo de Caja (etapa 2). |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro de cada Server Action; el middleware (`src/proxy.ts`) solo hace un filtrado grueso de rutas por conveniencia de UX.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Alcance de este MVP
+
+Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago, Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).
+
+**No incluido** (etapa 2/3 del PRD, explícitamente fuera de este MVP): Control de caja (apertura/cierre, ingresos/egresos), Compras/Proveedores, Devoluciones, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
+
+### Decisiones de alcance tomadas durante la construcción
+
+- **NextAuth v4** (estable) en vez de v5/Auth.js (aún en beta).
+- **Imagen de producto = URL únicamente** — no hay credenciales de storage (S3/Cloudinary/Vercel Blob) configuradas.
+- **Recuperar contraseña**: el flujo por token existe (`/forgot-password`, `/reset-password/[token]`), pero sin `SMTP_*` configurado el enlace solo se registra en la consola del servidor. El camino práctico en el MVP es que un administrador restablezca la contraseña desde `/usuarios`.
+- **Stock negativo bloqueado por defecto** (`Business.allowNegativeStock`, configurable en `/configuracion`).
+- **Precios con IGV incluido por defecto** (`igvIncluded = true`), configurable.
+- Toda tabla de negocio lleva `businessId` (preparado para multiempresa a futuro) aunque el MVP siembra un solo `Business`.
+
+## Estructura
+
+```
+prisma/schema.prisma      Esquema completo (ver plan de implementación)
+prisma/seed.ts             Negocio demo, admin, Cliente General, métodos de pago, catálogo de ejemplo
+src/actions/                Server Actions (una por dominio) — mutaciones + queries autorizadas
+src/app/(auth)/              Login, recuperar/restablecer contraseña
+src/app/(app)/                Todo el panel autenticado (sidebar + bottom nav)
+src/app/(print)/               Ruta de ticket sin chrome de la app, para imprimir/compartir
+src/components/              UI kit, POS, escáner, gráficos, tickets
+src/lib/                     prisma, auth, permisos, auditoría, dinero/IGV, fechas (zona horaria Lima)
+```
+
+## Verificación
+
+Se ejecutó un flujo end-to-end real contra la base de datos Neon (login → POS → venta → ticket → verificación de stock → anulación → verificación de stock restaurado → dashboard) en escritorio y móvil (390×844), sin errores de consola. Como resultado de esa verificación quedan en la base de datos sembrada un par de ventas de prueba (una anulada) — bórralas manualmente desde `/ventas` o re-siembra la base de datos si prefieres partir de datos completamente limpios.

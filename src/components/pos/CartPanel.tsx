@@ -12,6 +12,7 @@ export function CartPanel({
   onQuantityChange,
   onRemove,
   onCheckout,
+  showTitle = true,
 }: {
   lines: CartLine[];
   discount: number;
@@ -19,13 +20,15 @@ export function CartPanel({
   onQuantityChange: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
   onCheckout: () => void;
+  /** Oculta el encabezado "Carrito" cuando el contenedor ya provee un título (ej. el Modal móvil). */
+  showTitle?: boolean;
 }) {
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const total = Math.max(0, subtotal - discount);
 
   return (
     <div className="flex flex-col h-full">
-      <h2 className="text-sm font-semibold text-foreground px-1 mb-2">Carrito</h2>
+      {showTitle && <h2 className="text-sm font-semibold text-foreground px-1 mb-2">Carrito</h2>}
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
         {lines.length === 0 && (

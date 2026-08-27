@@ -160,6 +160,7 @@ export function PosClient({
             onDiscountChange={setDiscount}
             onQuantityChange={handleQuantityChange}
             onRemove={handleRemove}
+            showTitle={false}
             onCheckout={() => {
               setMobileCartOpen(false);
               setPaymentOpen(true);
