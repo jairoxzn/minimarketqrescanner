@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/money";
+import { formatDateTime } from "@/lib/date";
+import { formatTicketLabel } from "@/lib/ticket";
 
 type Sale = Awaited<ReturnType<typeof listSales>>[number];
 
@@ -66,8 +68,8 @@ export function VentasClient({
           <Tbody>
             {sales.map((s) => (
               <Tr key={s.id}>
-                <Td className="font-medium">{s.ticketSeries}-{String(s.ticketNumber).padStart(6, "0")}</Td>
-                <Td className="whitespace-nowrap">{s.createdAt.toLocaleString("es-PE")}</Td>
+                <Td className="font-medium">{formatTicketLabel(s.ticketSeries, s.ticketNumber)}</Td>
+                <Td className="whitespace-nowrap" suppressHydrationWarning>{formatDateTime(s.createdAt)}</Td>
                 <Td>{s.customer.name}</Td>
                 <Td>{s.user.name}</Td>
                 <Td>{s.payments.map((p) => p.paymentMethod.name).join(" + ")}</Td>

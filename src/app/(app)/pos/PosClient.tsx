@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { formatMoney } from "@/lib/money";
+import { formatTicketLabel } from "@/lib/ticket";
 import type { CartLine } from "@/components/pos/types";
 
 type Product = Awaited<ReturnType<typeof searchProductsForPos>>[number];
@@ -109,7 +110,7 @@ export function PosClient({
         payments: [{ paymentMethodId, amount: total }],
         amountReceived,
       });
-      toast.success(`Venta ${sale.ticketSeries}-${sale.ticketNumber} registrada correctamente`);
+      toast.success(`Venta ${formatTicketLabel(sale.ticketSeries, sale.ticketNumber)} registrada correctamente`);
       setLines([]);
       setDiscount(0);
       setPaymentOpen(false);

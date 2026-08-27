@@ -6,6 +6,8 @@ import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/money";
+import { formatDateTime } from "@/lib/date";
+import { formatTicketLabel } from "@/lib/ticket";
 
 const DOC_LABEL: Record<string, string> = { DNI: "DNI", RUC: "RUC", CE: "CE", PASSPORT: "Pasaporte", NONE: "—" };
 
@@ -54,8 +56,8 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
           <Tbody>
             {customer.sales.map((s) => (
               <Tr key={s.id}>
-                <Td className="font-medium">{s.ticketSeries}-{String(s.ticketNumber).padStart(6, "0")}</Td>
-                <Td>{s.createdAt.toLocaleString("es-PE")}</Td>
+                <Td className="font-medium">{formatTicketLabel(s.ticketSeries, s.ticketNumber)}</Td>
+                <Td>{formatDateTime(s.createdAt)}</Td>
                 <Td>{s.items.length}</Td>
                 <Td>{formatMoney(Number(s.total))}</Td>
                 <Td>

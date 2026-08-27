@@ -4,23 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { round2 } from "@/lib/money";
-
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
+import { startOfDayLima, formatDateShort } from "@/lib/date";
 
 export async function getDashboardData() {
   const session = requirePermission(await getCurrentSession(), "dashboard.view");
   const businessId = session.user.businessId;
 
   const now = new Date();
-  const todayStart = startOfDay(now);
+  // Todos los límites de fecha se calculan en hora de Lima (vía getUTC*, ya que
+  // todayStart es un instante UTC que representa la medianoche de Lima) —
+  // así "hoy/esta semana/este mes" no dependen de la zona horaria del servidor.
+  const todayStart = startOfDayLima(now);
+  const dow = todayStart.getUTCDay(); // 0 = domingo
   const weekStart = new Date(todayStart);
-  const dow = weekStart.getDay(); // 0 = domingo
-  weekStart.setDate(weekStart.getDate() - (dow === 0 ? 6 : dow - 1));
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  weekStart.setUTCDate(weekStart.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+  const monthStart = new Date(Date.UTC(todayStart.getUTCFullYear(), todayStart.getUTCMonth(), 1, 5, 0, 0, 0));
   const chartStart = new Date(todayStart);
-  chartStart.setDate(chartStart.getDate() - 6);
+  chartStart.setUTCDate(chartStart.getUTCDate() - 6);
 
   const rangeStart = chartStart < monthStart ? chartStart : monthStart;
 
@@ -55,13 +55,13 @@ export async function getDashboardData() {
 
   const salesByDay = Array.from({ length: 7 }, (_, idx) => {
     const dayDate = new Date(todayStart);
-    dayDate.setDate(dayDate.getDate() - (6 - idx));
+    dayDate.setUTCDate(dayDate.getUTCDate() - (6 - idx));
     const nextDay = new Date(dayDate);
-    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
     const dayTotal = sales
       .filter((s) => s.createdAt >= dayDate && s.createdAt < nextDay)
       .reduce((sum, s) => sum + Number(s.total), 0);
-    return { label: dayDate.toLocaleDateString("es-PE", { weekday: "short", day: "numeric" }), total: round2(dayTotal) };
+    return { label: formatDateShort(dayDate, { weekday: "short", day: "numeric" }), total: round2(dayTotal) };
   });
 
   const productMap = new Map(products.map((p) => [p.id, p]));

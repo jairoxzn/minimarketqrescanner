@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getSaleForTicket } from "@/actions/sales.actions";
 import { TicketView, type TicketViewData } from "@/components/tickets/TicketView";
+import { formatDateTime } from "@/lib/date";
+import { formatTicketLabel } from "@/lib/ticket";
 
 export default async function TicketPage({
   params,
@@ -17,8 +19,8 @@ export default async function TicketPage({
 
   const ticket: TicketViewData = {
     saleId: sale.id,
-    ticketLabel: `${sale.ticketSeries}-${String(sale.ticketNumber).padStart(6, "0")}`,
-    createdAt: sale.createdAt.toLocaleString("es-PE"),
+    ticketLabel: formatTicketLabel(sale.ticketSeries, sale.ticketNumber),
+    createdAt: formatDateTime(sale.createdAt),
     cashierName: sale.user.name,
     customerName: sale.customer.name,
     businessName: sale.business.name,

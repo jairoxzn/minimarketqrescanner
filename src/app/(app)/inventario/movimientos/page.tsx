@@ -4,6 +4,7 @@ import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDateTime } from "@/lib/date";
 
 const TYPE_LABEL: Record<string, string> = { ENTRADA: "Entrada", SALIDA: "Salida", AJUSTE: "Ajuste" };
 const TYPE_TONE: Record<string, "success" | "danger" | "warning"> = {
@@ -41,7 +42,7 @@ export default async function MovimientosInventarioPage() {
           <Tbody>
             {movements.map((m) => (
               <Tr key={m.id}>
-                <Td className="whitespace-nowrap">{m.createdAt.toLocaleString("es-PE")}</Td>
+                <Td className="whitespace-nowrap">{formatDateTime(m.createdAt)}</Td>
                 <Td className="font-medium">{m.product.name}</Td>
                 <Td><Badge tone={TYPE_TONE[m.type]}>{TYPE_LABEL[m.type]}</Badge></Td>
                 <Td className={m.quantity < 0 ? "text-danger" : "text-emerald-700"}>

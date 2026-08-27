@@ -7,6 +7,8 @@ import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/money";
+import { formatDateTime } from "@/lib/date";
+import { formatTicketLabel } from "@/lib/ticket";
 import { VoidSaleButton } from "./VoidSaleButton";
 
 export default async function VentaDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +17,7 @@ export default async function VentaDetailPage({ params }: { params: Promise<{ id
   if (!sale) notFound();
 
   const isAdmin = session?.user.role === "ADMIN";
-  const ticketLabel = `${sale.ticketSeries}-${String(sale.ticketNumber).padStart(6, "0")}`;
+  const ticketLabel = formatTicketLabel(sale.ticketSeries, sale.ticketNumber);
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,14 +35,14 @@ export default async function VentaDetailPage({ params }: { params: Promise<{ id
 
       {sale.status === "VOID" && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-sm text-danger px-4 py-3">
-          Anulada por {sale.voidedBy?.name} el {sale.voidedAt?.toLocaleString("es-PE")}. Motivo: {sale.voidReason}
+          Anulada por {sale.voidedBy?.name} el {sale.voidedAt && formatDateTime(sale.voidedAt)}. Motivo: {sale.voidReason}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card><CardBody className="text-sm flex flex-col gap-1">
           <p className="text-muted">Fecha</p>
-          <p className="font-medium text-foreground">{sale.createdAt.toLocaleString("es-PE")}</p>
+          <p className="font-medium text-foreground">{formatDateTime(sale.createdAt)}</p>
         </CardBody></Card>
         <Card><CardBody className="text-sm flex flex-col gap-1">
           <p className="text-muted">Cliente</p>
