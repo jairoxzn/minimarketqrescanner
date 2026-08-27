@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  VENDEDOR
+  CAJERO
+}
+
+enum MovementType {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum SaleStatus {
+  ACTIVE
+  VOID
+}
+
+enum DocType {
+  DNI
+  RUC
+  CE
+  PASSPORT
+  NONE
+}
+
+model Business {
+  id                 String   @id @default(cuid())
+  name               String
+  legalName          String?
+  ruc                String?
+  address            String?
+  phone              String?
+  whatsapp           String?
+  email              String?
+  logoUrl            String?
+  currency           String   @default("PEN")
+  currencySymbol     String   @default("S/")
+  igvEnabled         Boolean  @default(true)
+  igvPercent         Decimal  @default(18.00) @db.Decimal(5, 2)
+  igvIncluded        Boolean  @default(true)
+  ticketSeries       String   @default("B001")
+  allowNegativeStock Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  users              User[]
+  categories         Category[]
+  brands             Brand[]
+  products           Product[]
+  customers          Customer[]
+  paymentMethods     PaymentMethod[]
+  sales              Sale[]
+  inventoryMovements InventoryMovement[]
+  auditLogs          AuditLog[]
+  ticketCounter      TicketCounter?
+
+  @@map("businesses")
+}
+
+model TicketCounter {
+  id         String   @id @default(cuid())
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id])
+  series     String
+  current    Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@map("ticket_counters")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  businessId   String
+  business     Business  @relation(fields: [businessId], references: [id])
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(VENDEDOR)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sales               Sale[]               @relation("SaleUser")
+  voidedSales         Sale[]               @relation("SaleVoidedBy")
+  inventoryMovements  InventoryMovement[]
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([businessId])
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model Category {
+  id         String     @id @default(cuid())
+  businessId String
+  business   Business   @relation(fields: [businessId], references: [id])
+  name       String
+  parentId   String?
+  parent     Category?  @relation("CategoryToSub", fields: [parentId], references: [id])
+  children   Category[] @relation("CategoryToSub")
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+
+  products Product[]
+
+  @@index([businessId])
+  @@map("categories")
+}
+
+model Brand {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  products Product[]
+
+  @@index([businessId])
+  @@map("brands")
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id])
+  sku           String?
+  barcode       String?
+  name          String
+  description   String?
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  brandId       String?
+  brand         Brand?    @relation(fields: [brandId], references: [id])
+  imageUrl      String?
+  purchasePrice Decimal   @db.Decimal(10, 2)
+  salePrice     Decimal   @db.Decimal(10, 2)
+  stock         Int       @default(0)
+  minStock      Int       @default(0)
+  unit          String    @default("unidad")
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  saleItems          SaleItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([businessId, barcode])
+  @@unique([businessId, sku])
+  @@index([businessId, name])
+  @@map("products")
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  docType    DocType  @default(NONE)
+  docNumber  String?
+  phone      String?
+  address    String?
+  email      String?
+  isGeneral  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sales Sale[]
+
+  @@unique([businessId, docNumber])
+  @@index([businessId, name])
+  @@map("customers")
+}
+
+model PaymentMethod {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  code       String
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+
+  payments Payment[]
+
+  @@unique([businessId, code])
+  @@map("payment_methods")
+}
+
+model Sale {
+  id             String     @id @default(cuid())
+  businessId     String
+  business       Business   @relation(fields: [businessId], references: [id])
+  ticketSeries   String
+  ticketNumber   Int
+  customerId     String
+  customer       Customer   @relation(fields: [customerId], references: [id])
+  userId         String
+  user           User       @relation("SaleUser", fields: [userId], references: [id])
+  subtotal       Decimal    @db.Decimal(10, 2)
+  discount       Decimal    @default(0) @db.Decimal(10, 2)
+  igvAmount      Decimal    @default(0) @db.Decimal(10, 2)
+  total          Decimal    @db.Decimal(10, 2)
+  amountReceived Decimal?   @db.Decimal(10, 2)
+  changeAmount   Decimal?   @db.Decimal(10, 2)
+  status         SaleStatus @default(ACTIVE)
+  voidedAt       DateTime?
+  voidedById     String?
+  voidedBy       User?      @relation("SaleVoidedBy", fields: [voidedById], references: [id])
+  voidReason     String?
+  createdAt      DateTime   @default(now())
+
+  items    SaleItem[]
+  payments Payment[]
+
+  @@unique([businessId, ticketSeries, ticketNumber])
+  @@index([businessId, createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id          String  @id @default(cuid())
+  saleId      String
+  sale        Sale    @relation(fields: [saleId], references: [id])
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  unitCost    Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  saleId          String
+  sale            Sale          @relation(fields: [saleId], references: [id])
+  paymentMethodId String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  amount          Decimal       @db.Decimal(10, 2)
+  reference       String?
+
+  @@map("payments")
+}
+
+model InventoryMovement {
+  id            String       @id @default(cuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id])
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id])
+  type          MovementType
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  reason        String?
+  referenceType String?
+  referenceId   String?
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@index([businessId, productId, createdAt])
+  @@map("inventory_movements")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@map("audit_logs")
+}
