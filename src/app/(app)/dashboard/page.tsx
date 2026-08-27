@@ -34,6 +34,7 @@ export default async function DashboardPage() {
         <StatCard label="Ganancia estimada (mes)" value={formatMoney(data.gananciaMes)} />
         <StatCard label="Productos vendidos (mes)" value={String(data.productosVendidosMes)} />
         <StatCard label="Ingresos por ventas (mes)" value={formatMoney(data.month.total)} />
+        <StatCard label="Egresos de caja (mes)" value={formatMoney(data.egresosMes)} />
         <StatCard label="Stock bajo" value={String(data.lowStockCount)} tone={data.lowStockCount > 0 ? "warning" : undefined} />
         <StatCard label="Agotados" value={String(data.outOfStockCount)} tone={data.outOfStockCount > 0 ? "danger" : undefined} />
       </div>

@@ -5,11 +5,14 @@ export interface NavItem {
   label: string;
   icon: string;
   adminOnly?: boolean;
+  /** Si se define, solo estos roles ven el ítem (además de ADMIN, que siempre ve todo). */
+  roles?: Role[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/pos", label: "Punto de Venta", icon: "🛒" },
+  { href: "/caja", label: "Caja", icon: "💰", roles: ["ADMIN", "CAJERO"] },
   { href: "/productos", label: "Productos", icon: "📦" },
   { href: "/categorias", label: "Categorías", icon: "🏷️" },
   { href: "/marcas", label: "Marcas", icon: "🔖" },
@@ -29,6 +32,10 @@ export const MOBILE_TAB_ITEMS: NavItem[] = [
 ];
 
 export function visibleNavItems(role: Role): NavItem[] {
-  if (role === "ADMIN") return NAV_ITEMS;
-  return NAV_ITEMS.filter((item) => !item.adminOnly);
+  return NAV_ITEMS.filter((item) => {
+    if (role === "ADMIN") return true;
+    if (item.adminOnly) return false;
+    if (item.roles && !item.roles.includes(role)) return false;
+    return true;
+  });
 }

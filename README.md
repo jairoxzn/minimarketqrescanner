@@ -39,7 +39,7 @@ Cámbiala desde `/usuarios` (o pide a otro admin que la restablezca) antes de us
 |---|---|
 | **Administrador** | Todo — productos, usuarios, caja de configuración, anular ventas, ver todas las ventas. |
 | **Vendedor** | Vender en el POS, ver/crear/editar clientes, ver solo sus propias ventas, ver inventario/productos (sin editar). |
-| **Cajero** | Mismo set de permisos que Vendedor en este MVP — el rol existe como placeholder hasta que se construya el módulo de Caja (etapa 2). |
+| **Cajero** | Todo lo de Vendedor, más abrir/cerrar caja y registrar ingresos/egresos/retiros en `/caja`. |
 
 La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro de cada Server Action; el middleware (`src/proxy.ts`) solo hace un filtrado grueso de rutas por conveniencia de UX.
 
@@ -47,7 +47,9 @@ La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro d
 
 Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago, Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).
 
-**No incluido** (etapa 2/3 del PRD, explícitamente fuera de este MVP): Control de caja (apertura/cierre, ingresos/egresos), Compras/Proveedores, Devoluciones, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
+De la etapa 2 del PRD, ya se agregó **Control de caja** (`/caja`, `/caja/historial`): apertura con monto inicial, ingresos/egresos/retiros, cierre con arqueo (dinero contado vs. total esperado = inicial + ventas en efectivo + ingresos − egresos − retiros) y diferencia. El dashboard ahora muestra "Egresos de caja (mes)" con datos reales en vez del placeholder original.
+
+**No incluido todavía** (resto de la etapa 2/3 del PRD): Compras/Proveedores, Devoluciones, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
 
 ### Decisiones de alcance tomadas durante la construcción
 
@@ -57,6 +59,7 @@ Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Producto
 - **Stock negativo bloqueado por defecto** (`Business.allowNegativeStock`, configurable en `/configuracion`).
 - **Precios con IGV incluido por defecto** (`igvIncluded = true`), configurable.
 - Toda tabla de negocio lleva `businessId` (preparado para multiempresa a futuro) aunque el MVP siembra un solo `Business`.
+- **Caja**: una sola caja abierta por negocio a la vez (no una por usuario/terminal — coincide con el modelo del PRD, que menciona multi-caja recién en el plan Premium). Las ventas del POS **no** requieren una caja abierta para registrarse — Vendedor puede vender sin usar caja; Cajero/Admin usan `/caja` para el arqueo de efectivo cuando lo necesiten.
 
 ## Estructura
 

@@ -31,6 +31,17 @@ enum DocType {
   NONE
 }
 
+enum CashRegisterStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  INGRESO
+  EGRESO
+  RETIRO
+}
+
 model Business {
   id                 String   @id @default(cuid())
   name               String
@@ -61,6 +72,8 @@ model Business {
   inventoryMovements InventoryMovement[]
   auditLogs          AuditLog[]
   ticketCounter      TicketCounter?
+  cashRegisters      CashRegister[]
+  cashMovements      CashMovement[]
 
   @@map("businesses")
 }
@@ -94,6 +107,9 @@ model User {
   inventoryMovements  InventoryMovement[]
   auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
+  cashRegistersOpened CashRegister[]       @relation("CashRegisterOpenedBy")
+  cashRegistersClosed CashRegister[]       @relation("CashRegisterClosedBy")
+  cashMovements       CashMovement[]
 
   @@index([businessId])
   @@map("users")
@@ -305,4 +321,44 @@ model AuditLog {
 
   @@index([businessId, createdAt])
   @@map("audit_logs")
+}
+
+model CashRegister {
+  id             String             @id @default(cuid())
+  businessId     String
+  business       Business           @relation(fields: [businessId], references: [id])
+  openedById     String
+  openedBy       User               @relation("CashRegisterOpenedBy", fields: [openedById], references: [id])
+  closedById     String?
+  closedBy       User?              @relation("CashRegisterClosedBy", fields: [closedById], references: [id])
+  openingAmount  Decimal            @db.Decimal(10, 2)
+  openedAt       DateTime           @default(now())
+  closedAt       DateTime?
+  countedAmount  Decimal?           @db.Decimal(10, 2)
+  expectedAmount Decimal?           @db.Decimal(10, 2)
+  difference     Decimal?           @db.Decimal(10, 2)
+  status         CashRegisterStatus @default(OPEN)
+  notes          String?
+
+  movements CashMovement[]
+
+  @@index([businessId, status])
+  @@map("cash_registers")
+}
+
+model CashMovement {
+  id             String           @id @default(cuid())
+  businessId     String
+  business       Business         @relation(fields: [businessId], references: [id])
+  cashRegisterId String
+  cashRegister   CashRegister     @relation(fields: [cashRegisterId], references: [id])
+  type           CashMovementType
+  amount         Decimal          @db.Decimal(10, 2)
+  reason         String
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  createdAt      DateTime         @default(now())
+
+  @@index([businessId, cashRegisterId])
+  @@map("cash_movements")
 }

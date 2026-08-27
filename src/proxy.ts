@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 // Coarse route gating for UX only. The real security boundary is
 // lib/permissions.ts, re-checked inside every Server Action.
 const ADMIN_ONLY_PREFIXES = ["/usuarios", "/configuracion"];
+const ADMIN_OR_CAJERO_PREFIXES = ["/caja"];
 
 export default withAuth(
   function middleware(req) {
@@ -12,6 +13,11 @@ export default withAuth(
 
     const needsAdmin = ADMIN_ONLY_PREFIXES.some((prefix) => path.startsWith(prefix));
     if (needsAdmin && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    const needsAdminOrCajero = ADMIN_OR_CAJERO_PREFIXES.some((prefix) => path.startsWith(prefix));
+    if (needsAdminOrCajero && token?.role !== "ADMIN" && token?.role !== "CAJERO") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 

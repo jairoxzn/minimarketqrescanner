@@ -24,14 +24,20 @@ export async function getDashboardData() {
 
   const rangeStart = chartStart < monthStart ? chartStart : monthStart;
 
-  const [sales, products] = await Promise.all([
+  const [sales, products, cashMovementsMonth] = await Promise.all([
     prisma.sale.findMany({
       where: { businessId, status: "ACTIVE", createdAt: { gte: rangeStart } },
       include: { items: true, payments: { include: { paymentMethod: true } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.product.findMany({ where: { businessId, active: true }, include: { category: true } }),
+    prisma.cashMovement.findMany({
+      where: { businessId, createdAt: { gte: monthStart }, type: { in: ["EGRESO", "RETIRO"] } },
+      select: { amount: true },
+    }),
   ]);
+
+  const egresosMes = round2(cashMovementsMonth.reduce((sum, m) => sum + Number(m.amount), 0));
 
   const salesToday = sales.filter((s) => s.createdAt >= todayStart);
   const salesWeek = sales.filter((s) => s.createdAt >= weekStart);
@@ -101,6 +107,7 @@ export async function getDashboardData() {
     week: { count: salesWeek.length, total: sumTotal(salesWeek) },
     month: { count: salesMonth.length, total: sumTotal(salesMonth) },
     gananciaMes,
+    egresosMes,
     productosVendidosMes,
     lowStockCount: lowStock.length,
     outOfStockCount: outOfStock.length,

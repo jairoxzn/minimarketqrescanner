@@ -7,40 +7,30 @@ import type { Session } from "next-auth";
  * call can()/requirePermission() itself and never trust a role/businessId
  * sent from the client.
  *
- * MVP scope note: CAJERO has the same permission set as VENDEDOR for now —
- * caja-specific abilities (abrir/cerrar caja) don't exist until the Caja
- * module (stage 2) is built. The role exists as a schema/UI placeholder.
+ * CAJERO now differs from VENDEDOR by the cash.* permissions (PRD §20: Cajero
+ * puede abrir/cerrar caja y registrar ingresos/egresos; Vendedor no aparece
+ * en esa lista) — previously identical, this was a placeholder until the Caja
+ * module existed.
  */
+const SELLING_PERMISSIONS = [
+  "products.view",
+  "categories.view",
+  "brands.view",
+  "customers.view",
+  "customers.create",
+  "customers.update",
+  "paymentMethods.view",
+  "pos.sell",
+  "sales.viewOwn",
+  "sales.print",
+  "inventory.view",
+  "dashboard.view",
+] as const;
+
 export const ROLE_PERMISSIONS: Record<Role, Set<string> | "*"> = {
   ADMIN: "*",
-  VENDEDOR: new Set([
-    "products.view",
-    "categories.view",
-    "brands.view",
-    "customers.view",
-    "customers.create",
-    "customers.update",
-    "paymentMethods.view",
-    "pos.sell",
-    "sales.viewOwn",
-    "sales.print",
-    "inventory.view",
-    "dashboard.view",
-  ]),
-  CAJERO: new Set([
-    "products.view",
-    "categories.view",
-    "brands.view",
-    "customers.view",
-    "customers.create",
-    "customers.update",
-    "paymentMethods.view",
-    "pos.sell",
-    "sales.viewOwn",
-    "sales.print",
-    "inventory.view",
-    "dashboard.view",
-  ]),
+  VENDEDOR: new Set(SELLING_PERMISSIONS),
+  CAJERO: new Set([...SELLING_PERMISSIONS, "cash.open", "cash.close", "cash.movement", "cash.view"]),
 };
 
 export function can(session: Session | null | undefined, permission: string): boolean {
