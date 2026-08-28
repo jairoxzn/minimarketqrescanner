@@ -58,6 +58,12 @@ export function ProductSearchPanel({
               onClick={() => onAdd(p)}
               className="flex flex-col items-start gap-1 rounded-xl border border-border bg-white p-3 text-left hover:border-primary hover:shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.imageUrl} alt={p.name} className="h-16 w-16 rounded-lg border border-border object-cover bg-white self-center" />
+              ) : (
+                <div className="h-16 w-16 rounded-lg border border-dashed border-border self-center flex items-center justify-center text-muted text-lg">📦</div>
+              )}
               <span className="font-medium text-sm text-foreground line-clamp-2">{p.name}</span>
               <span className="text-primary font-bold">{formatMoney(Number(p.salePrice))}</span>
               <span className="text-xs text-muted">{outOfStock ? "Agotado" : `Stock: ${p.stock} ${p.unit}`}</span>

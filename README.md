@@ -80,7 +80,7 @@ Verificado además con una cámara simulada (feed de video real, no una imagen e
 ### Decisiones de alcance tomadas durante la construcción
 
 - **NextAuth v4** (estable) en vez de v5/Auth.js (aún en beta).
-- **Imagen de producto = URL únicamente** — no hay credenciales de storage (S3/Cloudinary/Vercel Blob) configuradas.
+- **Imagen de producto**: se sube como archivo, se comprime y redimensiona en el navegador (máx. 640px, JPEG ~75% calidad) antes de guardarse como base64 en la base de datos — mismo criterio sin-storage-externo que el QR de métodos de pago, pero con compresión porque una foto de celular sin comprimir sí volvería pesadas las listas de productos y el POS. Se muestra como miniatura en `/productos` y en las tarjetas de búsqueda del POS.
 - **Recuperar contraseña**: el flujo por token existe (`/forgot-password`, `/reset-password/[token]`), pero sin `SMTP_*` configurado el enlace solo se registra en la consola del servidor. El camino práctico en el MVP es que un administrador restablezca la contraseña desde `/usuarios`.
 - **Stock negativo bloqueado por defecto** (`Business.allowNegativeStock`, configurable en `/configuracion`).
 - **Precios con IGV incluido por defecto** (`igvIncluded = true`), configurable.

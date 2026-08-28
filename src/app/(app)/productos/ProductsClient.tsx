@@ -144,8 +144,18 @@ export function ProductsClient({
               return (
                 <Tr key={p.id}>
                   <Td>
-                    <div className="font-medium text-foreground">{p.name}</div>
-                    <div className="text-xs text-muted">{p.sku || p.barcode || "—"}</div>
+                    <div className="flex items-center gap-3">
+                      {p.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.imageUrl} alt={p.name} className="h-10 w-10 rounded-lg border border-border object-cover bg-white shrink-0" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg border border-dashed border-border shrink-0 flex items-center justify-center text-muted text-xs">📦</div>
+                      )}
+                      <div>
+                        <div className="font-medium text-foreground">{p.name}</div>
+                        <div className="text-xs text-muted">{p.sku || p.barcode || "—"}</div>
+                      </div>
+                    </div>
                   </Td>
                   <Td>{p.category?.name ?? <span className="text-muted">—</span>}</Td>
                   <Td>{formatMoney(Number(p.salePrice))}</Td>

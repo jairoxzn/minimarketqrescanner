@@ -183,7 +183,9 @@ model Product {
   category      Category? @relation(fields: [categoryId], references: [id])
   brandId       String?
   brand         Brand?    @relation(fields: [brandId], references: [id])
-  imageUrl      String?
+  // Data URL (base64, comprimida en el cliente) o una URL externa — mismo
+  // criterio sin-storage-externo que el QR de PaymentMethod.
+  imageUrl      String?   @db.Text
   purchasePrice Decimal   @db.Decimal(10, 2)
   salePrice     Decimal   @db.Decimal(10, 2)
   stock         Int       @default(0)

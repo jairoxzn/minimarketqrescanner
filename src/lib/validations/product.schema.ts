@@ -8,7 +8,8 @@ export const productSchema = z.object({
   description: z.string().max(2000).optional().or(z.literal("")),
   categoryId: z.string().optional().or(z.literal("")),
   brandId: z.string().optional().or(z.literal("")),
-  imageUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  // Data URL (imagen subida y comprimida en el cliente) o una URL externa pegada a mano.
+  imageUrl: z.string().max(2_000_000, "La imagen es demasiado grande").optional().or(z.literal("")),
   purchasePrice: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
   salePrice: z.coerce.number().min(0.01, "Debe ser mayor a 0"),
   minStock: z.coerce.number().int().min(0).default(0),

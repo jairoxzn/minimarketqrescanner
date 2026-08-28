@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Card, CardBody } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
+import { compressImageToDataUrl } from "@/lib/image";
+import { useState } from "react";
 
 interface Option {
   id: string;
@@ -51,6 +53,8 @@ export function ProductForm({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues, unknown, ProductInput>({
     resolver: zodResolver(productSchema),
@@ -86,6 +90,28 @@ export function ProductForm({
           initialStock: 0,
         },
   });
+
+  const imageUrl = watch("imageUrl");
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("El archivo debe ser una imagen");
+      return;
+    }
+    setIsProcessingImage(true);
+    try {
+      const compressed = await compressImageToDataUrl(file);
+      setValue("imageUrl", compressed, { shouldDirty: true });
+    } catch {
+      toast.error("No se pudo procesar la imagen");
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
 
   const onSubmit = async (data: ProductInput) => {
     try {
@@ -134,7 +160,26 @@ export function ProductForm({
             <Input label="SKU" error={errors.sku?.message} {...register("sku")} />
             <Input label="Código de barras" error={errors.barcode?.message} {...register("barcode")} />
           </div>
-          <Input label="URL de imagen" placeholder="https://…" error={errors.imageUrl?.message} {...register("imageUrl")} />
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">Imagen del producto (opcional)</label>
+            {imageUrl && (
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt={product?.name ?? "Producto"} className="h-24 w-24 rounded-lg border border-border object-cover bg-white" />
+                <Button type="button" variant="secondary" size="sm" onClick={() => setValue("imageUrl", "", { shouldDirty: true })}>
+                  Quitar
+                </Button>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200"
+            />
+            {isProcessingImage && <p className="text-xs text-muted">Procesando imagen…</p>}
+            {errors.imageUrl?.message && <p className="text-xs text-danger">{errors.imageUrl.message}</p>}
+          </div>
         </CardBody>
       </Card>
 
