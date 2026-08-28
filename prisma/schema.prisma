@@ -43,6 +43,12 @@ enum CashMovementType {
   RETIRO
 }
 
+enum PurchaseStatus {
+  PENDIENTE
+  RECIBIDA
+  CANCELADA
+}
+
 model Business {
   id                 String   @id @default(cuid())
   name               String
@@ -76,6 +82,8 @@ model Business {
   cashRegisters      CashRegister[]
   cashMovements      CashMovement[]
   returns            Return[]
+  suppliers          Supplier[]
+  purchases          Purchase[]
 
   @@map("businesses")
 }
@@ -113,6 +121,8 @@ model User {
   cashRegistersClosed CashRegister[]       @relation("CashRegisterClosedBy")
   cashMovements       CashMovement[]
   returns             Return[]
+  purchasesCreated    Purchase[]           @relation("PurchaseCreatedBy")
+  purchasesReceived   Purchase[]           @relation("PurchaseReceivedBy")
 
   @@index([businessId])
   @@map("users")
@@ -186,6 +196,7 @@ model Product {
   saleItems          SaleItem[]
   inventoryMovements InventoryMovement[]
   returnItems        ReturnItem[]
+  purchaseItems      PurchaseItem[]
 
   @@unique([businessId, barcode])
   @@unique([businessId, sku])
@@ -404,4 +415,64 @@ model ReturnItem {
   @@index([returnId])
   @@index([saleItemId])
   @@map("return_items")
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+  name        String
+  ruc         String?
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  purchases Purchase[]
+
+  @@unique([businessId, ruc])
+  @@index([businessId, name])
+  @@map("suppliers")
+}
+
+model Purchase {
+  id            String         @id @default(cuid())
+  businessId    String
+  business      Business       @relation(fields: [businessId], references: [id])
+  supplierId    String
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  userId        String
+  user          User           @relation("PurchaseCreatedBy", fields: [userId], references: [id])
+  status        PurchaseStatus @default(PENDIENTE)
+  invoiceNumber String?
+  total         Decimal        @db.Decimal(10, 2)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  receivedAt    DateTime?
+  receivedById  String?
+  receivedBy    User?          @relation("PurchaseReceivedBy", fields: [receivedById], references: [id])
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  items PurchaseItem[]
+
+  @@index([businessId, status])
+  @@index([businessId, createdAt])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitCost   Decimal  @db.Decimal(10, 2)
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  @@index([purchaseId])
+  @@map("purchase_items")
 }

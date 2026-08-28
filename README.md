@@ -65,8 +65,9 @@ De la etapa 2 del PRD, ya se agregó:
 
 - **Control de caja** (`/caja`, `/caja/historial`): apertura con monto inicial, ingresos/egresos/retiros, cierre con arqueo (dinero contado vs. total esperado = inicial + ventas en efectivo + ingresos − egresos − retiros) y diferencia. El dashboard muestra "Egresos de caja (mes)" con datos reales en vez del placeholder original del MVP.
 - **Devoluciones** (`/devoluciones`, `/devoluciones/nueva`): buscar una venta activa por N° de ticket o cliente (o entrar desde el botón "Registrar devolución" en el detalle de una venta), elegir cantidad a devolver por producto (con tope automático = vendido − ya devuelto), motivo obligatorio, y actualización automática de inventario con un movimiento de tipo `DEVOLUCION` (el PRD §9 define 4 tipos de movimiento — Entrada/Salida/Ajuste/Devolución — el enum original solo tenía 3; se corrigió al construir este módulo). Cualquier rol de venta (Vendedor, Cajero, Admin) puede procesar devoluciones, no solo Admin. La devolución no reabre ni ajusta el total de la venta original — solo repone stock y deja un registro auditable, tal como lo describe el diagrama de flujo del PRD.
+- **Compras y Proveedores** (`/compras`, `/compras/nueva`, `/proveedores`, ambos solo Admin): registrar un proveedor, armar una orden de compra con varios productos (cantidad + costo unitario), y elegir si se recibe de inmediato o queda "Pendiente". Recibir una compra pendiente suma el stock (movimiento `ENTRADA`, motivo "Compra a {proveedor}") y — opcional, marcado por defecto — actualiza el `purchasePrice` del producto al último costo pagado, para que el reporte de ganancias quede al día. Una compra pendiente se puede cancelar (sin efecto en stock, nunca se aplicó); una ya recibida no se puede cancelar desde aquí.
 
-**No incluido todavía** (resto de la etapa 2/3 del PRD): Compras/Proveedores, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
+**No incluido todavía** (resto de la etapa 2/3 del PRD): Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
 
 ### Decisiones de alcance tomadas durante la construcción
 
