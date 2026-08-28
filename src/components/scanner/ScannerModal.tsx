@@ -19,7 +19,7 @@ export function ScannerModal({
   const handleDetected = (code: string) => {
     onDetected(code);
   };
-  const { state, videoRef, start, stop, hasTorch, torchOn, toggleTorch } = useBarcodeScanner(handleDetected);
+  const { state, errorMessage, videoRef, start, stop, hasTorch, torchOn, toggleTorch } = useBarcodeScanner(handleDetected);
 
   useEffect(() => {
     if (open) {
@@ -77,7 +77,9 @@ export function ScannerModal({
           </p>
         )}
         {state === "error" && (
-          <p className="text-sm text-danger">Ocurrió un error al iniciar la cámara. Intenta de nuevo o ingresa el código manualmente.</p>
+          <p className="text-sm text-danger">
+            {errorMessage ?? "Ocurrió un error al iniciar la cámara."} Intenta de nuevo o ingresa el código manualmente.
+          </p>
         )}
 
         <form onSubmit={handleManualSubmit} className="flex gap-2">

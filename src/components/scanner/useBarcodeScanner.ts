@@ -26,6 +26,7 @@ declare global {
 
 export function useBarcodeScanner(onDetected: (code: string) => void) {
   const [state, setState] = useState<ScannerState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasTorch, setHasTorch] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -59,6 +60,7 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
 
   const start = useCallback(async () => {
     if (typeof window === "undefined") return;
+    setErrorMessage(null);
 
     // getUserMedia is only available in a "secure context" — https://, or the
     // literal hosts "localhost"/"127.0.0.1". Opening the app over plain
@@ -115,11 +117,26 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         zxingControlsRef.current = controls;
       }
     } catch (err) {
-      if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
-        setState("denied");
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setState("denied");
+          return;
+        }
+        // Distinguish the common camera-acquisition failures — a vague
+        // "hubo un error" for all of them hides exactly the info needed to
+        // tell "no camera on this machine" apart from "another app has it".
+        const messages: Record<string, string> = {
+          NotFoundError: "No se encontró ninguna cámara en este dispositivo.",
+          NotReadableError: "La cámara está siendo usada por otra aplicación o pestaña — ciérrala e intenta de nuevo.",
+          OverconstrainedError: "La cámara de este dispositivo no cumple los requisitos solicitados (ej. cámara trasera).",
+          SecurityError: "El navegador bloqueó el acceso a la cámara por seguridad.",
+          AbortError: "El acceso a la cámara se interrumpió antes de completarse.",
+        };
+        setErrorMessage(messages[err.name] ?? `Error de cámara: ${err.name} — ${err.message}`);
       } else {
-        setState("error");
+        setErrorMessage(err instanceof Error ? err.message : "Error desconocido al iniciar la cámara.");
       }
+      setState("error");
     }
   }, [emit]);
 
@@ -136,5 +153,5 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
 
   useEffect(() => stop, [stop]);
 
-  return { state, videoRef, start, stop, hasTorch, torchOn, toggleTorch };
+  return { state, errorMessage, videoRef, start, stop, hasTorch, torchOn, toggleTorch };
 }
