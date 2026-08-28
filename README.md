@@ -85,7 +85,7 @@ Verificado además con una cámara simulada (feed de video real, no una imagen e
 - **Stock negativo bloqueado por defecto** (`Business.allowNegativeStock`, configurable en `/configuracion`).
 - **Precios con IGV incluido por defecto** (`igvIncluded = true`), configurable.
 - Toda tabla de negocio lleva `businessId` (preparado para multiempresa a futuro) aunque el MVP siembra un solo `Business`.
-- **Caja**: una sola caja abierta por negocio a la vez (no una por usuario/terminal — coincide con el modelo del PRD, que menciona multi-caja recién en el plan Premium). Las ventas del POS **no** requieren una caja abierta para registrarse — Vendedor puede vender sin usar caja; Cajero/Admin usan `/caja` para el arqueo de efectivo cuando lo necesiten.
+- **Caja**: una sola caja abierta por negocio a la vez (no una por usuario/terminal — coincide con el modelo del PRD, que menciona multi-caja recién en el plan Premium). **Registrar una venta en el POS requiere que haya una caja abierta** — el POS muestra un aviso y bloquea "Finalizar venta" si no la hay, y `createSale` lo vuelve a exigir del lado del servidor (la barrera real). Como Vendedor no tiene permiso para abrir caja, en la práctica un Admin o Cajero debe abrirla al inicio del turno para que cualquiera pueda vender contra esa misma caja — no hace falta que cada vendedor abra la suya.
 
 ## Estructura
 

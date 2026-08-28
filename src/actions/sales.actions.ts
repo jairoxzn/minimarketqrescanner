@@ -64,6 +64,17 @@ export async function createSale(input: CreateSaleInput) {
   if (!customer) throw new Error("Cliente no encontrado");
 
   const sale = await prisma.$transaction(async (tx) => {
+    // La caja debe estar abierta para poder vender — chequeado dentro de la
+    // transacción (no antes) para que sea consistente si alguien la cierra
+    // justo en el medio de este mismo instante.
+    const openRegister = await tx.cashRegister.findFirst({
+      where: { businessId, status: "OPEN" },
+      select: { id: true },
+    });
+    if (!openRegister) {
+      throw new Error("No hay una caja abierta. Un administrador o cajero debe abrir la caja antes de registrar ventas.");
+    }
+
     const counter = await tx.ticketCounter.update({
       where: { businessId },
       data: { current: { increment: 1 } },

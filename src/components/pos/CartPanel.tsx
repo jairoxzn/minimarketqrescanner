@@ -13,6 +13,8 @@ export function CartPanel({
   onRemove,
   onCheckout,
   showTitle = true,
+  checkoutDisabled = false,
+  checkoutDisabledReason,
 }: {
   lines: CartLine[];
   discount: number;
@@ -22,6 +24,9 @@ export function CartPanel({
   onCheckout: () => void;
   /** Oculta el encabezado "Carrito" cuando el contenedor ya provee un título (ej. el Modal móvil). */
   showTitle?: boolean;
+  /** Ej. no hay caja abierta — bloquea el cobro aunque el carrito tenga productos. */
+  checkoutDisabled?: boolean;
+  checkoutDisabledReason?: string;
 }) {
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const total = Math.max(0, subtotal - discount);
@@ -93,7 +98,10 @@ export function CartPanel({
           <span>TOTAL</span>
           <span>{formatMoney(total)}</span>
         </div>
-        <Button size="lg" className="mt-2" disabled={lines.length === 0} onClick={onCheckout}>
+        {checkoutDisabled && checkoutDisabledReason && (
+          <p className="text-xs text-danger text-center">{checkoutDisabledReason}</p>
+        )}
+        <Button size="lg" className="mt-2" disabled={lines.length === 0 || checkoutDisabled} onClick={onCheckout}>
           Finalizar venta
         </Button>
       </div>

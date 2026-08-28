@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, can } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { serializeDecimals } from "@/lib/serialize";
 import { round2 } from "@/lib/money";
@@ -15,6 +15,21 @@ import {
   type CashMovementInput,
   type CloseCashRegisterInput,
 } from "@/lib/validations/cash.schema";
+
+/**
+ * Chequeo liviano de "¿hay caja abierta?" para el POS — a diferencia de
+ * getCurrentRegister(), no requiere "cash.view" (que Vendedor no tiene) y no
+ * expone montos/movimientos, solo si puede vender o no y si el usuario actual
+ * tiene permiso para abrir una caja él mismo.
+ */
+export async function isRegisterOpen() {
+  const session = requirePermission(await getCurrentSession(), "pos.sell");
+  const register = await prisma.cashRegister.findFirst({
+    where: { businessId: session.user.businessId, status: "OPEN" },
+    select: { id: true },
+  });
+  return { open: !!register, canOpen: can(session, "cash.open") };
+}
 
 async function computeRegisterSummary(businessId: string, register: { id: string; openedAt: Date; closedAt: Date | null; openingAmount: unknown }) {
   const [cashSales, movements] = await Promise.all([

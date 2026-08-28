@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchProductsForPos, getProductByBarcode } from "@/actions/products.actions";
 import { createSale } from "@/actions/sales.actions";
+import type { isRegisterOpen } from "@/actions/cash.actions";
 import type { listCustomers } from "@/actions/customers.actions";
 import type { listPaymentMethods } from "@/actions/paymentMethods.actions";
 import { ProductSearchPanel } from "@/components/pos/ProductSearchPanel";
@@ -21,18 +23,28 @@ import type { CartLine } from "@/components/pos/types";
 type Product = Awaited<ReturnType<typeof searchProductsForPos>>[number];
 type Customer = Awaited<ReturnType<typeof listCustomers>>[number];
 type PaymentMethod = Awaited<ReturnType<typeof listPaymentMethods>>[number];
+type RegisterStatus = Awaited<ReturnType<typeof isRegisterOpen>>;
 
 export function PosClient({
   initialProducts,
   initialCustomers,
   paymentMethods,
+  registerStatus,
 }: {
   initialProducts: Product[];
   initialCustomers: Customer[];
   paymentMethods: PaymentMethod[];
+  registerStatus: RegisterStatus;
 }) {
   const router = useRouter();
   const toast = useToast();
+
+  const canSell = registerStatus.open;
+  const checkoutDisabledReason = canSell
+    ? undefined
+    : registerStatus.canOpen
+      ? "No hay una caja abierta — ábrela para poder cobrar."
+      : "No hay una caja abierta. Pide a un administrador o cajero que la abra.";
 
   const [lines, setLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
@@ -124,21 +136,36 @@ export function PosClient({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 lg:-m-6 p-4 lg:p-6 gap-4 lg:flex-row">
-      <div className="flex-1 min-h-0">
-        <ProductSearchPanel initialProducts={initialProducts} onAdd={addProduct} onOpenScanner={() => setScannerOpen(true)} />
-      </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 lg:-m-6 p-4 lg:p-6 gap-4">
+      {!canSell && (
+        <div className="no-print flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
+          <span className="text-warning font-medium">⚠️ No hay una caja abierta — no se pueden cobrar ventas hasta que se abra una.</span>
+          {registerStatus.canOpen ? (
+            <Link href="/caja"><Button size="sm">Abrir caja</Button></Link>
+          ) : (
+            <span className="text-muted">Pide a un administrador o cajero que la abra.</span>
+          )}
+        </div>
+      )}
 
-      {/* Desktop cart panel */}
-      <div className="hidden lg:flex lg:w-96 shrink-0 rounded-xl border border-border bg-white p-4">
-        <CartPanel
-          lines={lines}
-          discount={discount}
-          onDiscountChange={setDiscount}
-          onQuantityChange={handleQuantityChange}
-          onRemove={handleRemove}
-          onCheckout={() => setPaymentOpen(true)}
-        />
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row gap-4">
+        <div className="flex-1 min-h-0">
+          <ProductSearchPanel initialProducts={initialProducts} onAdd={addProduct} onOpenScanner={() => setScannerOpen(true)} />
+        </div>
+
+        {/* Desktop cart panel */}
+        <div className="hidden lg:flex lg:w-96 shrink-0 rounded-xl border border-border bg-white p-4">
+          <CartPanel
+            lines={lines}
+            discount={discount}
+            onDiscountChange={setDiscount}
+            onQuantityChange={handleQuantityChange}
+            onRemove={handleRemove}
+            onCheckout={() => setPaymentOpen(true)}
+            checkoutDisabled={!canSell}
+            checkoutDisabledReason={checkoutDisabledReason}
+          />
+        </div>
       </div>
 
       {/* Mobile floating cart bar */}
@@ -165,6 +192,8 @@ export function PosClient({
               setMobileCartOpen(false);
               setPaymentOpen(true);
             }}
+            checkoutDisabled={!canSell}
+            checkoutDisabledReason={checkoutDisabledReason}
           />
         </div>
       </Modal>
