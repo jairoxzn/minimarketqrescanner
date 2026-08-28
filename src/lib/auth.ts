@@ -2,6 +2,10 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { getRateLimitStatus, recordAttempt, resetRateLimit, formatRetryAfter } from "@/lib/rateLimit";
+
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -23,18 +27,33 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Correo y contraseña son obligatorios");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
-        });
+        const email = credentials.email.toLowerCase().trim();
+        const rateLimitKey = `login:${email}`;
 
-        if (!user || !user.active) {
-          throw new Error("Credenciales inválidas");
+        // Protección contra fuerza bruta (PRD §29 "Rate limiting") — se
+        // revisa ANTES de tocar la base de datos, por email normalizado.
+        const preCheck = getRateLimitStatus(rateLimitKey, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MS);
+        if (preCheck.limited) {
+          throw new Error(
+            `Demasiados intentos fallidos. Intenta de nuevo en ${formatRetryAfter(preCheck.retryAfterMs)}.`
+          );
         }
 
-        const passwordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        const passwordValid = user && user.active && (await bcrypt.compare(credentials.password, user.passwordHash));
+
         if (!passwordValid) {
+          const result = recordAttempt(rateLimitKey, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MS);
+          if (result.limited) {
+            throw new Error(
+              `Demasiados intentos fallidos. Intenta de nuevo en ${formatRetryAfter(result.retryAfterMs)}.`
+            );
+          }
           throw new Error("Credenciales inválidas");
         }
+
+        resetRateLimit(rateLimitKey);
 
         await prisma.user.update({
           where: { id: user.id },

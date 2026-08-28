@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/devoluciones", label: "Devoluciones", icon: "↩️" },
   { href: "/reportes/ventas", label: "Reportes", icon: "📊" },
   { href: "/usuarios", label: "Usuarios", icon: "🔐", adminOnly: true },
+  { href: "/auditoria", label: "Auditoría", icon: "🕵️", adminOnly: true },
   { href: "/configuracion", label: "Configuración", icon: "⚙️", adminOnly: true },
 ];
 

@@ -7,8 +7,11 @@ import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations/aut
 import { getCurrentSession } from "@/lib/session";
 import { UnauthorizedError } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { recordAttempt, formatRetryAfter } from "@/lib/rateLimit";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hora
+const RESET_REQUEST_MAX = 3;
+const RESET_REQUEST_WINDOW_MS = 60 * 60 * 1000; // 1 hora
 
 /**
  * Envío real de correo requiere variables SMTP_* (no configuradas en este MVP).
@@ -21,7 +24,19 @@ export async function requestPasswordReset(input: { email: string }) {
     return { ok: false as const, message: "Correo inválido" };
   }
 
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase().trim() } });
+  const email = parsed.data.email.toLowerCase().trim();
+
+  // Límite por email (PRD §29 "Rate limiting") — evita generar tokens/spam
+  // sin filtrar si el correo existe (el resultado sigue siendo el mismo mensaje genérico).
+  const rateLimit = recordAttempt(`password-reset:${email}`, RESET_REQUEST_MAX, RESET_REQUEST_WINDOW_MS);
+  if (rateLimit.limited) {
+    return {
+      ok: true as const,
+      message: `Si el correo existe, se envió un enlace de recuperación. Si ya lo solicitaste antes, espera ${formatRetryAfter(rateLimit.retryAfterMs)} antes de intentar de nuevo.`,
+    };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (user && user.active) {
     const token = crypto.randomBytes(32).toString("hex");

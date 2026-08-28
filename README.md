@@ -43,6 +43,20 @@ Cámbiala desde `/usuarios` (o pide a otro admin que la restablezca) antes de us
 
 La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro de cada Server Action; el middleware (`src/proxy.ts`) solo hace un filtrado grueso de rutas por conveniencia de UX.
 
+## Seguridad (PRD §29)
+
+| Requisito | Estado |
+|---|---|
+| Contraseñas cifradas | ✅ bcrypt |
+| Control de sesiones | ✅ JWT (NextAuth), 30 días |
+| Roles y permisos | ✅ `src/lib/permissions.ts`, re-verificado en cada Server Action |
+| Validación de formularios | ✅ Zod en cliente y servidor |
+| Protección SQL Injection | ✅ Prisma parametriza todo, incluso los `$queryRaw` con guardas de stock |
+| Protección XSS | ✅ React escapa por defecto; sin `dangerouslySetInnerHTML` en el código |
+| Protección CSRF | ✅ provista por Next.js Server Actions (verificación de `Origin`) |
+| **Rate limiting** | ✅ Login: 5 intentos fallidos / 15 min por correo (`src/lib/rateLimit.ts`). Recuperar contraseña: 3 solicitudes/hora por correo. En memoria, por proceso — ver limitación documentada en el archivo si el sistema llega a escalar horizontalmente. |
+| Auditoría | ✅ Se registra en cada acción importante (`AuditLog`) **y ahora tiene visor** en `/auditoria` (solo Admin): filtros por usuario/acción/fecha. |
+
 ## Alcance de este MVP
 
 Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago, Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).

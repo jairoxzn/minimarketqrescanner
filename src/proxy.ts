@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 // Coarse route gating for UX only. The real security boundary is
 // lib/permissions.ts, re-checked inside every Server Action.
-const ADMIN_ONLY_PREFIXES = ["/usuarios", "/configuracion"];
+const ADMIN_ONLY_PREFIXES = ["/usuarios", "/configuracion", "/auditoria"];
 const ADMIN_OR_CAJERO_PREFIXES = ["/caja"];
 
 export default withAuth(

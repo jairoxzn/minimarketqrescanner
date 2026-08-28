@@ -40,7 +40,11 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setFormError("Correo o contraseña incorrectos");
+      // authorize() en lib/auth.ts lanza mensajes específicos (credenciales
+      // inválidas, rate limit) — se muestran tal cual salvo que sea el código
+      // genérico interno de NextAuth, para no perder el mensaje de "demasiados
+      // intentos" detrás de un texto siempre igual.
+      setFormError(result.error === "CredentialsSignin" ? "Correo o contraseña incorrectos" : result.error);
       return;
     }
     router.push(callbackUrl);
