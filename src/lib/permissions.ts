@@ -25,6 +25,8 @@ const SELLING_PERMISSIONS = [
   "sales.print",
   "inventory.view",
   "dashboard.view",
+  "returns.create",
+  "returns.view",
 ] as const;
 
 export const ROLE_PERMISSIONS: Record<Role, Set<string> | "*"> = {

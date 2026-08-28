@@ -47,9 +47,12 @@ La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro d
 
 Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago, Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).
 
-De la etapa 2 del PRD, ya se agregó **Control de caja** (`/caja`, `/caja/historial`): apertura con monto inicial, ingresos/egresos/retiros, cierre con arqueo (dinero contado vs. total esperado = inicial + ventas en efectivo + ingresos − egresos − retiros) y diferencia. El dashboard ahora muestra "Egresos de caja (mes)" con datos reales en vez del placeholder original.
+De la etapa 2 del PRD, ya se agregó:
 
-**No incluido todavía** (resto de la etapa 2/3 del PRD): Compras/Proveedores, Devoluciones, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
+- **Control de caja** (`/caja`, `/caja/historial`): apertura con monto inicial, ingresos/egresos/retiros, cierre con arqueo (dinero contado vs. total esperado = inicial + ventas en efectivo + ingresos − egresos − retiros) y diferencia. El dashboard muestra "Egresos de caja (mes)" con datos reales en vez del placeholder original del MVP.
+- **Devoluciones** (`/devoluciones`, `/devoluciones/nueva`): buscar una venta activa por N° de ticket o cliente (o entrar desde el botón "Registrar devolución" en el detalle de una venta), elegir cantidad a devolver por producto (con tope automático = vendido − ya devuelto), motivo obligatorio, y actualización automática de inventario con un movimiento de tipo `DEVOLUCION` (el PRD §9 define 4 tipos de movimiento — Entrada/Salida/Ajuste/Devolución — el enum original solo tenía 3; se corrigió al construir este módulo). Cualquier rol de venta (Vendedor, Cajero, Admin) puede procesar devoluciones, no solo Admin. La devolución no reabre ni ajusta el total de la venta original — solo repone stock y deja un registro auditable, tal como lo describe el diagrama de flujo del PRD.
+
+**No incluido todavía** (resto de la etapa 2/3 del PRD): Compras/Proveedores, Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
 
 ### Decisiones de alcance tomadas durante la construcción
 
@@ -76,4 +79,4 @@ src/lib/                     prisma, auth, permisos, auditoría, dinero/IGV, fec
 
 ## Verificación
 
-Se ejecutó un flujo end-to-end real contra la base de datos Neon (login → POS → venta → ticket → verificación de stock → anulación → verificación de stock restaurado → dashboard) en escritorio y móvil (390×844), sin errores de consola. Como resultado de esa verificación quedan en la base de datos sembrada un par de ventas de prueba (una anulada) — bórralas manualmente desde `/ventas` o re-siembra la base de datos si prefieres partir de datos completamente limpios.
+Se ejecutaron flujos end-to-end reales contra la base de datos Neon (login → POS → venta → ticket → stock → anulación; apertura/movimientos/cierre de caja con arqueo; venta → devolución parcial → stock repuesto) en escritorio y móvil (390×844), sin errores de consola. Esto encontró y corrigió bugs reales antes de la entrega (ver historial de commits) — no fue solo revisión de código. Como resultado quedan en la base de datos sembrada varias ventas, cierres de caja y devoluciones de prueba — bórralas manualmente desde sus respectivas pantallas, o re-siembra la base de datos si prefieres partir de datos completamente limpios.

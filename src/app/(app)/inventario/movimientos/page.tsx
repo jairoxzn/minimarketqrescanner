@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MovementType } from "@prisma/client";
 import { listInventoryMovements } from "@/actions/inventory.actions";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -6,11 +7,20 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateTime } from "@/lib/date";
 
-const TYPE_LABEL: Record<string, string> = { ENTRADA: "Entrada", SALIDA: "Salida", AJUSTE: "Ajuste" };
-const TYPE_TONE: Record<string, "success" | "danger" | "warning"> = {
+// Record<MovementType, ...> (not Record<string, ...>) so TS forces this map to
+// stay exhaustive if a new MovementType is ever added — this exact class of gap
+// (a new enum value silently rendering blank) is what happened with DEVOLUCION.
+const TYPE_LABEL: Record<MovementType, string> = {
+  ENTRADA: "Entrada",
+  SALIDA: "Salida",
+  AJUSTE: "Ajuste",
+  DEVOLUCION: "Devolución",
+};
+const TYPE_TONE: Record<MovementType, "success" | "danger" | "warning" | "info"> = {
   ENTRADA: "success",
   SALIDA: "danger",
   AJUSTE: "warning",
+  DEVOLUCION: "info",
 };
 
 export default async function MovimientosInventarioPage() {
