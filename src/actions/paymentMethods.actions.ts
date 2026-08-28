@@ -21,7 +21,13 @@ export async function createPaymentMethod(input: PaymentMethodInput) {
 
   const count = await prisma.paymentMethod.count({ where: { businessId: session.user.businessId } });
   const method = await prisma.paymentMethod.create({
-    data: { businessId: session.user.businessId, name: data.name, code: data.code, sortOrder: count },
+    data: {
+      businessId: session.user.businessId,
+      name: data.name,
+      code: data.code,
+      sortOrder: count,
+      qrImageUrl: data.qrImageUrl || null,
+    },
   });
 
   await writeAuditLog(prisma, {
@@ -48,7 +54,7 @@ export async function updatePaymentMethod(input: PaymentMethodInput) {
 
   const method = await prisma.paymentMethod.update({
     where: { id: data.id },
-    data: { name: data.name, code: data.code },
+    data: { name: data.name, code: data.code, qrImageUrl: data.qrImageUrl || null },
   });
 
   revalidatePath("/configuracion");

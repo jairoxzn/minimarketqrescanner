@@ -233,6 +233,11 @@ model PaymentMethod {
   code       String
   active     Boolean  @default(true)
   sortOrder  Int      @default(0)
+  // QR para pagos por Yape/Plin/etc. — se guarda como data URL (base64) en vez
+  // de subirlo a un storage externo, mismo criterio que las imágenes de
+  // producto: sin credenciales de nube configuradas en este proyecto. Cabe
+  // perfectamente en un TEXT de Postgres para una imagen de este tamaño.
+  qrImageUrl String?  @db.Text
 
   payments Payment[]
 

@@ -59,7 +59,9 @@ La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro d
 
 ## Alcance de este MVP
 
-Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago, Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).
+Incluye todo lo listado como "obligatorio" en el PRD: Login, Dashboard, Productos, Categorías/Marcas, Inventario, POS Web (con escáner de cámara), Clientes, Métodos de pago (incluyendo QR de Yape/Plin/etc. — ver abajo), Tickets (impresión térmica 58/80mm + PDF + WhatsApp), Historial de ventas + anulación, Usuarios/Roles, Reporte de ventas (+ versión ligera de productos/ganancias), Configuración del negocio, y diseño responsive (móvil/tablet/desktop).
+
+**QR de Yape/Plin en el POS**: desde Configuración → Métodos de pago, cada método puede tener una imagen de QR (subida como archivo, máx. 800 KB — se guarda como base64 en la base de datos, mismo criterio sin-storage-externo que las imágenes de producto). Cuando el cajero elige ese método al cobrar en el POS, el QR aparece en el modal de pago para que el cliente lo escanee — funciona para cualquier método, no solo Yape/Plin.
 
 De la etapa 2 del PRD, ya se agregó:
 

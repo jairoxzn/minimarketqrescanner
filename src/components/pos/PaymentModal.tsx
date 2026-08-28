@@ -62,6 +62,14 @@ export function PaymentModal({
           ))}
         </Select>
 
+        {selectedMethod?.qrImageUrl && (
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-slate-50 p-4">
+            <p className="text-sm text-foreground">Muestra este código para que el cliente pague con {selectedMethod.name}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={selectedMethod.qrImageUrl} alt={`QR de ${selectedMethod.name}`} className="h-48 w-48 rounded-lg border border-border object-contain bg-white" />
+          </div>
+        )}
+
         {isCash && (
           <div className="grid grid-cols-2 gap-3">
             <Input
