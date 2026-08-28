@@ -33,7 +33,7 @@ function FieldChrome({
 }
 
 const baseFieldClasses =
-  "h-11 w-full rounded-lg border border-border bg-white px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:bg-slate-50 disabled:text-muted";
+  "h-11 w-full rounded-xl border border-border bg-white px-3.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:bg-background disabled:text-muted";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement>, FieldWrapperProps {}
 
@@ -53,7 +53,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     <FieldChrome label={label} error={error} hint={hint} required={required}>
       <textarea
         ref={ref}
-        className={`min-h-24 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary ${className}`}
+        className={`min-h-24 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary ${className}`}
         {...props}
       />
     </FieldChrome>

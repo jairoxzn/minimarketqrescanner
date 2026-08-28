@@ -1,14 +1,15 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "accent" | "danger" | "ghost";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary-hover",
-  secondary: "bg-white text-foreground border border-border hover:bg-slate-50",
+  primary: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm shadow-primary/20",
+  secondary: "bg-white text-foreground border border-border hover:bg-background",
+  accent: "bg-accent text-accent-foreground hover:bg-accent-hover shadow-sm shadow-accent/20",
   danger: "bg-danger text-white hover:bg-danger-hover",
-  ghost: "bg-transparent text-foreground hover:bg-slate-100",
+  ghost: "bg-transparent text-foreground hover:bg-background",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -29,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={`inline-flex items-center justify-center rounded-full font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
         {...props}
       >
         {isLoading && (
