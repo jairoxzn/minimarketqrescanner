@@ -69,6 +69,12 @@ De la etapa 2 del PRD, ya se agregó:
 
 **No incluido todavía** (resto de la etapa 2/3 del PRD): Multiempresa/SuperAdmin, Suscripciones, Facturación electrónica, Modo offline.
 
+### Escáner de códigos de barras — requiere contexto seguro
+
+`getUserMedia` (la API de cámara) solo funciona en un **contexto seguro**: `https://`, o literalmente los hosts `localhost` / `127.0.0.1`. Si pruebas el escáner abriendo la app en el celular usando la IP de la computadora en la red local (ej. `http://192.168.x.x:3000`), el navegador bloquea la cámara sin más — no es un bug de la app, es una restricción del navegador. La app ahora detecta esto y muestra un mensaje explicándolo en vez de fallar en silencio. Para probar el escáner desde un celular real necesitas servir la app por HTTPS (ej. un túnel como ngrok, o desplegarla) o probar en la propia computadora vía `localhost`.
+
+Verificado además con una cámara simulada (feed de video real, no una imagen estática) alimentando un código de barras EAN-13 real a la app corriendo: detectó el código correctamente, buscó el producto y mostró el flujo de "Producto no registrado" — la lógica de escaneo en sí (cámara → detección en vivo vía `@zxing/browser`, ya que `BarcodeDetector` nativo no está disponible en Chrome de escritorio en Windows → búsqueda del producto) funciona de punta a punta.
+
 ### Decisiones de alcance tomadas durante la construcción
 
 - **NextAuth v4** (estable) en vez de v5/Auth.js (aún en beta).

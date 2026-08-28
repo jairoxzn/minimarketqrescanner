@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type ScannerState = "idle" | "requesting-permission" | "scanning" | "denied" | "unsupported" | "error";
+export type ScannerState =
+  | "idle"
+  | "requesting-permission"
+  | "scanning"
+  | "denied"
+  | "unsupported"
+  | "insecure-context"
+  | "error";
 
 const SUPPORTED_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "qr_code"];
 const DETECTION_DEBOUNCE_MS = 1500;
@@ -51,7 +58,21 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
   }, []);
 
   const start = useCallback(async () => {
-    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    if (typeof window === "undefined") return;
+
+    // getUserMedia is only available in a "secure context" — https://, or the
+    // literal hosts "localhost"/"127.0.0.1". Opening the app over plain
+    // http:// from another device's browser (e.g. testing on a phone via the
+    // desktop's LAN IP, like http://192.168.x.x:3000) fails this check even
+    // though everything else about the setup is fine — the most common real-
+    // world reason the camera silently never starts. Surfaced explicitly so
+    // it doesn't just look like a generic "unsupported" or "error".
+    if (!window.isSecureContext) {
+      setState("insecure-context");
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
       setState("unsupported");
       return;
     }

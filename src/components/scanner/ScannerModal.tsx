@@ -69,6 +69,13 @@ export function ScannerModal({
         {state === "unsupported" && (
           <p className="text-sm text-warning">Este dispositivo no soporta escaneo por cámara. Ingresa el código manualmente.</p>
         )}
+        {state === "insecure-context" && (
+          <p className="text-sm text-warning">
+            El navegador bloquea la cámara porque esta página no se abrió con conexión segura. Si estás probando desde
+            el celular usando la IP de la computadora (ej. http://192.168.x.x:3000), eso no funciona para la cámara —
+            usa <strong>https://</strong> o abre la app en <strong>localhost</strong>. Mientras tanto, ingresa el código manualmente.
+          </p>
+        )}
         {state === "error" && (
           <p className="text-sm text-danger">Ocurrió un error al iniciar la cámara. Intenta de nuevo o ingresa el código manualmente.</p>
         )}
