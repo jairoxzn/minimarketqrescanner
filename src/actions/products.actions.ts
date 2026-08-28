@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { productSchema, productImportRowSchema, type ProductInput, type ProductImportRow } from "@/lib/validations/product.schema";
 
 export interface ProductFilters {
@@ -40,40 +41,43 @@ export async function listProducts(filters: ProductFilters = {}) {
   });
 
   if (filters.stockLevel === "low") {
-    return products.filter((p) => p.stock > 0 && p.stock <= p.minStock);
+    return serializeDecimals(products.filter((p) => p.stock > 0 && p.stock <= p.minStock));
   }
   if (filters.stockLevel === "out") {
-    return products.filter((p) => p.stock <= 0);
+    return serializeDecimals(products.filter((p) => p.stock <= 0));
   }
-  return products;
+  return serializeDecimals(products);
 }
 
 export async function getProduct(id: string) {
   const session = requirePermission(await getCurrentSession(), "products.view");
-  return prisma.product.findFirst({
+  const product = await prisma.product.findFirst({
     where: { id, businessId: session.user.businessId },
     include: { category: true, brand: true },
   });
+  return serializeDecimals(product);
 }
 
 /** Usado por el POS y el escáner de códigos de barras. */
 export async function getProductByBarcode(barcode: string) {
   const session = requirePermission(await getCurrentSession(), "pos.sell");
-  return prisma.product.findFirst({
+  const product = await prisma.product.findFirst({
     where: { businessId: session.user.businessId, barcode, active: true },
   });
+  return serializeDecimals(product);
 }
 
 export async function searchProductsForPos(query: string) {
   const session = requirePermission(await getCurrentSession(), "pos.sell");
   if (!query.trim()) {
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       where: { businessId: session.user.businessId, active: true },
       orderBy: { name: "asc" },
       take: 30,
     });
+    return serializeDecimals(products);
   }
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: {
       businessId: session.user.businessId,
       active: true,
@@ -86,6 +90,7 @@ export async function searchProductsForPos(query: string) {
     orderBy: { name: "asc" },
     take: 30,
   });
+  return serializeDecimals(products);
 }
 
 export async function createProduct(input: ProductInput) {
@@ -143,7 +148,7 @@ export async function createProduct(input: ProductInput) {
 
   revalidatePath("/productos");
   revalidatePath("/inventario");
-  return product;
+  return serializeDecimals(product);
 }
 
 export async function updateProduct(input: ProductInput) {
@@ -186,7 +191,7 @@ export async function updateProduct(input: ProductInput) {
   });
 
   revalidatePath("/productos");
-  return product;
+  return serializeDecimals(product);
 }
 
 export async function deleteProduct(id: string) {

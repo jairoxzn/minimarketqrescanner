@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { customerSchema, type CustomerInput } from "@/lib/validations/customer.schema";
 
 export async function listCustomers(search?: string) {
@@ -26,7 +27,7 @@ export async function listCustomers(search?: string) {
 
 export async function getCustomer(id: string) {
   const session = requirePermission(await getCurrentSession(), "customers.view");
-  return prisma.customer.findFirst({
+  const customer = await prisma.customer.findFirst({
     where: { id, businessId: session.user.businessId },
     include: {
       sales: {
@@ -37,6 +38,7 @@ export async function getCustomer(id: string) {
       },
     },
   });
+  return serializeDecimals(customer);
 }
 
 export async function getGeneralCustomer(businessId: string) {

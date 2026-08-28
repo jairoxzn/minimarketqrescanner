@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission, UnauthorizedError } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { round2, calcIgvFromTotal } from "@/lib/money";
 import { createSaleSchema, type CreateSaleInput } from "@/lib/validations/sale.schema";
 
@@ -150,7 +151,7 @@ export async function createSale(input: CreateSaleInput) {
   revalidatePath("/inventario");
   revalidatePath("/dashboard");
 
-  return sale;
+  return serializeDecimals(sale);
 }
 
 export interface SaleFilters {
@@ -194,12 +195,13 @@ export async function listSales(filters: SaleFilters = {}) {
     ];
   }
 
-  return prisma.sale.findMany({
+  const sales = await prisma.sale.findMany({
     where,
     include: { customer: true, user: true, payments: { include: { paymentMethod: true } } },
     orderBy: { createdAt: "desc" },
     take: 300,
   });
+  return serializeDecimals(sales);
 }
 
 export async function getSale(id: string) {
@@ -219,13 +221,13 @@ export async function getSale(id: string) {
   if (session.user.role !== "ADMIN" && sale.userId !== session.user.id) {
     throw new UnauthorizedError("No puedes ver ventas de otros usuarios");
   }
-  return sale;
+  return serializeDecimals(sale);
 }
 
 /** Usado por la ruta de impresión de tickets — sin restricción de propietario, solo requiere sesión válida del mismo negocio. */
 export async function getSaleForTicket(id: string) {
   const session = requirePermission(await getCurrentSession(), "sales.print");
-  return prisma.sale.findFirst({
+  const sale = await prisma.sale.findFirst({
     where: { id, businessId: session.user.businessId },
     include: {
       customer: true,
@@ -235,6 +237,7 @@ export async function getSaleForTicket(id: string) {
       business: true,
     },
   });
+  return serializeDecimals(sale);
 }
 
 /**

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { round2 } from "@/lib/money";
 import {
   openCashRegisterSchema,
@@ -56,7 +57,7 @@ export async function getCurrentRegister() {
   if (!register) return null;
 
   const summary = await computeRegisterSummary(session.user.businessId, register);
-  return { register, summary };
+  return serializeDecimals({ register, summary });
 }
 
 export async function openCashRegister(input: OpenCashRegisterInput) {
@@ -86,7 +87,7 @@ export async function openCashRegister(input: OpenCashRegisterInput) {
   });
 
   revalidatePath("/caja");
-  return register;
+  return serializeDecimals(register);
 }
 
 export async function addCashMovement(input: CashMovementInput) {
@@ -118,7 +119,7 @@ export async function addCashMovement(input: CashMovementInput) {
   });
 
   revalidatePath("/caja");
-  return movement;
+  return serializeDecimals(movement);
 }
 
 export async function closeCashRegister(input: CloseCashRegisterInput) {
@@ -165,18 +166,20 @@ export async function closeCashRegister(input: CloseCashRegisterInput) {
 
 export async function listCashRegisterHistory() {
   const session = requirePermission(await getCurrentSession(), "cash.view");
-  return prisma.cashRegister.findMany({
+  const registers = await prisma.cashRegister.findMany({
     where: { businessId: session.user.businessId, status: "CLOSED" },
     include: { openedBy: true, closedBy: true },
     orderBy: { closedAt: "desc" },
     take: 100,
   });
+  return serializeDecimals(registers);
 }
 
 export async function getCashRegisterDetail(id: string) {
   const session = requirePermission(await getCurrentSession(), "cash.view");
-  return prisma.cashRegister.findFirst({
+  const register = await prisma.cashRegister.findFirst({
     where: { id, businessId: session.user.businessId },
     include: { openedBy: true, closedBy: true, movements: { include: { user: true }, orderBy: { createdAt: "desc" } } },
   });
+  return serializeDecimals(register);
 }

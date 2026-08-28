@@ -5,11 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { businessSchema, type BusinessInput } from "@/lib/validations/business.schema";
 
 export async function getBusiness() {
   const session = requirePermission(await getCurrentSession(), "dashboard.view");
-  return prisma.business.findUniqueOrThrow({ where: { id: session.user.businessId } });
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: session.user.businessId } });
+  return serializeDecimals(business);
 }
 
 export async function updateBusiness(input: BusinessInput) {

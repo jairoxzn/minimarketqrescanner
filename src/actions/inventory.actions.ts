@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 
 export async function listInventoryOverview() {
   const session = requirePermission(await getCurrentSession(), "inventory.view");
@@ -14,7 +15,7 @@ export async function listInventoryOverview() {
     include: { category: true },
     orderBy: { name: "asc" },
   });
-  return products;
+  return serializeDecimals(products);
 }
 
 export interface MovementFilters {
@@ -28,12 +29,13 @@ export async function listInventoryMovements(filters: MovementFilters = {}) {
   if (filters.productId) where.productId = filters.productId;
   if (filters.type) where.type = filters.type;
 
-  return prisma.inventoryMovement.findMany({
+  const movements = await prisma.inventoryMovement.findMany({
     where,
     include: { product: true, user: true },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
+  return serializeDecimals(movements);
 }
 
 /** Registra una entrada de mercadería (compra, reposición, etc.) — suma al stock actual. */

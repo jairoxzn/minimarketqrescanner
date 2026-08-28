@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { round2 } from "@/lib/money";
 import { createPurchaseSchema, type CreatePurchaseInput } from "@/lib/validations/purchase.schema";
 
@@ -18,17 +19,18 @@ export async function listPurchases(filters: PurchaseFilters = {}) {
   const where: Prisma.PurchaseWhereInput = { businessId: session.user.businessId };
   if (filters.status && filters.status !== "all") where.status = filters.status;
 
-  return prisma.purchase.findMany({
+  const purchases = await prisma.purchase.findMany({
     where,
     include: { supplier: true, user: true, items: true },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
+  return serializeDecimals(purchases);
 }
 
 export async function getPurchase(id: string) {
   const session = requirePermission(await getCurrentSession(), "purchases.manage");
-  return prisma.purchase.findFirst({
+  const purchase = await prisma.purchase.findFirst({
     where: { id, businessId: session.user.businessId },
     include: {
       supplier: true,
@@ -37,6 +39,7 @@ export async function getPurchase(id: string) {
       items: { include: { product: true } },
     },
   });
+  return serializeDecimals(purchase);
 }
 
 /** Aplica la recepción de una compra: repone stock (movimiento ENTRADA) y, opcionalmente,
@@ -143,7 +146,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
   revalidatePath("/compras");
   revalidatePath("/productos");
   revalidatePath("/inventario");
-  return purchase;
+  return serializeDecimals(purchase);
 }
 
 export async function receivePurchase(id: string, updateProductPrices: boolean) {

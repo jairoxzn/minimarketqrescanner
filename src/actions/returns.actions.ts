@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
+import { serializeDecimals } from "@/lib/serialize";
 import { round2 } from "@/lib/money";
 import { createReturnSchema, type CreateReturnInput } from "@/lib/validations/return.schema";
 
@@ -17,7 +18,7 @@ export async function findSaleForReturn(query: string) {
   if (!trimmed) return [];
 
   const asNumber = Number(trimmed.replace(/^\D*0*/, ""));
-  return prisma.sale.findMany({
+  const sales = await prisma.sale.findMany({
     where: {
       businessId,
       status: "ACTIVE",
@@ -30,6 +31,7 @@ export async function findSaleForReturn(query: string) {
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+  return serializeDecimals(sales);
 }
 
 async function withReturnedQuantities(saleId: string) {
@@ -62,7 +64,7 @@ export async function getSaleForReturn(saleId: string) {
   const session = requirePermission(await getCurrentSession(), "returns.create");
   const result = await withReturnedQuantities(saleId);
   if (!result || result.sale.businessId !== session.user.businessId) return null;
-  return result;
+  return serializeDecimals(result);
 }
 
 export async function createReturn(input: CreateReturnInput) {
@@ -170,23 +172,25 @@ export async function createReturn(input: CreateReturnInput) {
   revalidatePath(`/ventas/${data.saleId}`);
   revalidatePath("/productos");
   revalidatePath("/inventario");
-  return returnRecord;
+  return serializeDecimals(returnRecord);
 }
 
 export async function listReturns() {
   const session = requirePermission(await getCurrentSession(), "returns.view");
-  return prisma.return.findMany({
+  const returns = await prisma.return.findMany({
     where: { businessId: session.user.businessId },
     include: { sale: true, user: true, items: true },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
+  return serializeDecimals(returns);
 }
 
 export async function getReturn(id: string) {
   const session = requirePermission(await getCurrentSession(), "returns.view");
-  return prisma.return.findFirst({
+  const ret = await prisma.return.findFirst({
     where: { id, businessId: session.user.businessId },
     include: { sale: { include: { customer: true } }, user: true, items: { include: { product: true } } },
   });
+  return serializeDecimals(ret);
 }
