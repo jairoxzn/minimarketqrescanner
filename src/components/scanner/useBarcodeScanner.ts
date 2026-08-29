@@ -33,7 +33,7 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<{ code: string; at: number } | null>(null);
-  const zxingControlsRef = useRef<{ stop: () => void } | null>(null);
+  const zxingControlsRef = useRef<{ stop: () => void }[]>([]);
 
   const emit = useCallback(
     (code: string) => {
@@ -49,8 +49,8 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
-    zxingControlsRef.current?.stop();
-    zxingControlsRef.current = null;
+    zxingControlsRef.current.forEach((controls) => controls.stop());
+    zxingControlsRef.current = [];
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setState("idle");
@@ -111,58 +111,63 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         // Fallback for browsers without native BarcodeDetector (e.g. desktop
         // Chrome on Windows — confirmed via testing that it isn't actually
         // available there — and Safari/iOS).
-        const [{ BrowserMultiFormatReader }, { DecodeHintType, BarcodeFormat }] = await Promise.all([
-          import("@zxing/browser"),
-          import("@zxing/library"),
-        ]);
+        const [
+          { BrowserMultiFormatOneDReader, BrowserQRCodeReader },
+          { DecodeHintType, BarcodeFormat },
+        ] = await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
 
-        // Two changes that materially affect how fast this feels, not just
-        // how it's configured:
-        // 1. Restrict formats to what a retail barcode scanner actually
-        //    needs. With no hints, MultiFormatReader tries EVERY format on
-        //    every attempt (QR, DataMatrix, Aztec, PDF417, MaxiCode, etc.) —
-        //    confirmed via a live-video test where all of those fired on
-        //    every single frame. Pure wasted CPU per attempt.
-        // 2. The library's own default delay between decode attempts is
-        //    500ms (@zxing/browser's BrowserCodeReader default) — meaning at
-        //    most 2 attempts/second regardless of camera frame rate, which
-        //    is the dominant reason this felt slow, not the format list.
-        //    Dropped to 80ms (~12 attempts/second) for a snappier feel
-        //    without pegging the CPU.
-        // No TRY_HARDER: with POSSIBLE_FORMATS set, MultiFormatReader.setHints()
-        // (see node_modules/@zxing/library/esm/core/MultiFormatReader.js) only
-        // pushes the 1D reader *before* QRCodeReader when tryHarder is falsy —
-        // with it on, 1D gets pushed last, so every frame would probe for a QR
-        // finder pattern before ever trying EAN/UPC/Code128, working against
-        // the dominant use case this fix targets. TRY_HARDER's other upside
-        // (more scanlines per attempt, rotation handling — see OneDReader.js)
-        // is worth less than that ordering cost now that attempts run ~6x more
-        // often; the extra attempts cover for single-frame thoroughness.
-        const hints = new Map();
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        // Two dedicated readers run concurrently against the same video
+        // element instead of one combined BrowserMultiFormatReader. Why:
+        // a single MultiFormatReader with both 1D and QR formats requested
+        // reorders its internal readers based on TRY_HARDER — with it off,
+        // 1D goes first (good for our dominant case) but loses TRY_HARDER's
+        // per-attempt thoroughness (scans the *entire* frame height instead
+        // of ~25 sample rows, plus a 90°-rotation retry — see OneDReader.js
+        // doDecode/decode); with it on, 1D gets pushed *after* QR, so every
+        // frame probes for a QR finder pattern first. A real photo of a
+        // barcode — angled, motion-blurred, off-center, glare from plastic
+        // wrap — is exactly the case that thoroughness matters for, so
+        // neither setting alone was right. Splitting into two single-purpose
+        // readers gets both: the 1D reader can use TRY_HARDER without any
+        // QR reader in its internal list to be pushed behind (no other
+        // reader exists in that instance, so there's nothing to reorder),
+        // and QR still works as a second, independent reader — it simply
+        // isn't first in line, which is the correct priority for a grocery
+        // POS scanner.
+        const oneDHints = new Map();
+        oneDHints.set(DecodeHintType.POSSIBLE_FORMATS, [
           BarcodeFormat.EAN_13,
           BarcodeFormat.EAN_8,
           BarcodeFormat.UPC_A,
           BarcodeFormat.UPC_E,
           BarcodeFormat.CODE_128,
-          BarcodeFormat.QR_CODE,
         ]);
+        oneDHints.set(DecodeHintType.TRY_HARDER, true);
 
-        const reader = new BrowserMultiFormatReader(hints, {
-          delayBetweenScanAttempts: 80,
-          // NOT DETECTION_DEBOUNCE_MS — that already lives in emit() as a
-          // per-code dedup (lines above). This library option instead gates
-          // the *next decode attempt* after ANY successful read, matching
-          // delayBetweenScanAttempts keeps it from also blocking a second,
-          // different code scanned shortly after the first — the native
-          // BarcodeDetector path (rAF loop, no such gate) has no equivalent
-          // restriction, so this keeps both paths behaving the same way.
-          delayBetweenScanSuccess: 80,
-        });
-        const controls = await reader.decodeFromVideoElement(videoRef.current, (result) => {
-          if (result) emit(result.getText());
-        });
-        zxingControlsRef.current = controls;
+        // The library's own default delay between decode attempts is 500ms
+        // (@zxing/browser's BrowserCodeReader default) — a hard floor of 2
+        // attempts/second regardless of camera frame rate. Dropped to 80ms
+        // (~12/sec) on both readers for a snappier feel without pegging the
+        // CPU. delayBetweenScanSuccess also set to 80ms rather than the
+        // detection debounce (that dedup already lives in emit() above) —
+        // the library option gates the *next attempt after any success*,
+        // and a longer value here would block detecting a second, different
+        // code shortly after the first, unlike the native BarcodeDetector
+        // path (rAF loop, no such gate).
+        const scanOptions = { delayBetweenScanAttempts: 80, delayBetweenScanSuccess: 80 };
+
+        const oneDReader = new BrowserMultiFormatOneDReader(oneDHints, scanOptions);
+        const qrReader = new BrowserQRCodeReader(undefined, scanOptions);
+
+        const [oneDControls, qrControls] = await Promise.all([
+          oneDReader.decodeFromVideoElement(videoRef.current, (result) => {
+            if (result) emit(result.getText());
+          }),
+          qrReader.decodeFromVideoElement(videoRef.current, (result) => {
+            if (result) emit(result.getText());
+          }),
+        ]);
+        zxingControlsRef.current = [oneDControls, qrControls];
       }
     } catch (err) {
       if (err instanceof DOMException) {
