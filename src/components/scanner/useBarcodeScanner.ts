@@ -108,9 +108,42 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         };
         rafRef.current = requestAnimationFrame(tick);
       } else {
-        // Fallback for browsers without native BarcodeDetector (e.g. Safari/iOS).
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        const reader = new BrowserMultiFormatReader();
+        // Fallback for browsers without native BarcodeDetector (e.g. desktop
+        // Chrome on Windows — confirmed via testing that it isn't actually
+        // available there — and Safari/iOS).
+        const [{ BrowserMultiFormatReader }, { DecodeHintType, BarcodeFormat }] = await Promise.all([
+          import("@zxing/browser"),
+          import("@zxing/library"),
+        ]);
+
+        // Two changes that materially affect how fast this feels, not just
+        // how it's configured:
+        // 1. Restrict formats to what a retail barcode scanner actually
+        //    needs. With no hints, MultiFormatReader tries EVERY format on
+        //    every attempt (QR, DataMatrix, Aztec, PDF417, MaxiCode, etc.) —
+        //    confirmed via a live-video test where all of those fired on
+        //    every single frame. Pure wasted CPU per attempt.
+        // 2. The library's own default delay between decode attempts is
+        //    500ms (@zxing/browser's BrowserCodeReader default) — meaning at
+        //    most 2 attempts/second regardless of camera frame rate, which
+        //    is the dominant reason this felt slow, not the format list.
+        //    Dropped to 80ms (~12 attempts/second) for a snappier feel
+        //    without pegging the CPU.
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.QR_CODE,
+        ]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const reader = new BrowserMultiFormatReader(hints, {
+          delayBetweenScanAttempts: 80,
+          delayBetweenScanSuccess: DETECTION_DEBOUNCE_MS,
+        });
         const controls = await reader.decodeFromVideoElement(videoRef.current, (result) => {
           if (result) emit(result.getText());
         });
