@@ -158,16 +158,30 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
 
         const oneDReader = new BrowserMultiFormatOneDReader(oneDHints, scanOptions);
         const qrReader = new BrowserQRCodeReader(undefined, scanOptions);
+        const onResult = (result: { getText(): string } | undefined) => {
+          if (result) emit(result.getText());
+        };
 
-        const [oneDControls, qrControls] = await Promise.all([
-          oneDReader.decodeFromVideoElement(videoRef.current, (result) => {
-            if (result) emit(result.getText());
-          }),
-          qrReader.decodeFromVideoElement(videoRef.current, (result) => {
-            if (result) emit(result.getText());
-          }),
+        // Promise.all would reject as soon as either decodeFromVideoElement()
+        // call rejects, without ever exposing the controls of the other call
+        // that already resolved — decodeFromVideoElement() starts that
+        // reader's own setTimeout-based decode loop as soon as it resolves,
+        // so a rejection on one side (e.g. the 3s "canplay" wait in
+        // playVideoOnLoadAsync timing out during a camera hiccup) would leave
+        // the *other* reader's loop running with no controls captured to
+        // stop() it — a permanent per-frame decode loop leaking after the
+        // modal closes. allSettled captures every controls object that did
+        // resolve before deciding whether to report an error, so stop() can
+        // always reach anything that got started.
+        const settled = await Promise.allSettled([
+          oneDReader.decodeFromVideoElement(videoRef.current, onResult),
+          qrReader.decodeFromVideoElement(videoRef.current, onResult),
         ]);
-        zxingControlsRef.current = [oneDControls, qrControls];
+        zxingControlsRef.current = settled
+          .filter((r) => r.status === "fulfilled")
+          .map((r) => (r as PromiseFulfilledResult<{ stop: () => void }>).value);
+        const rejected = settled.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+        if (rejected) throw rejected.reason;
       }
     } catch (err) {
       if (err instanceof DOMException) {
