@@ -82,7 +82,21 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
     setState("requesting-permission");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: "environment",
+          // La resolución por defecto que el navegador elige sin pedir nada
+          // suele ser baja (a veces 640x480) — de sobra para videollamada,
+          // pero le da al decodificador muy pocos píxeles por barra en un
+          // código real, borroso o inclinado. Medido con un canvas sintético:
+          // decodeFromCanvas tarda ~12ms a 640x480 pero ~63ms a 1920x1440 en
+          // esta máquina (probablemente más en un celular real) — con el
+          // intervalo de 80ms entre intentos, subir demasiado la resolución
+          // le resta FPS reales al escaneo, justo lo contrario de lo que se
+          // pidió acá. 1280 es un punto medio: ~3x más detalle que 640 sin
+          // que el costo por intento se vuelva el cuello de botella.
+          width: { ideal: 1280 },
+          height: { ideal: 1280 },
+        },
       });
       streamRef.current = stream;
       if (!videoRef.current) return;
@@ -91,8 +105,27 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
       setState("scanning");
 
       const [track] = stream.getVideoTracks();
-      const capabilities = track.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+      const capabilities = track.getCapabilities?.() as
+        | (MediaTrackCapabilities & { torch?: boolean; focusMode?: string[] })
+        | undefined;
       if (capabilities?.torch) setHasTorch(true);
+
+      // Enfoque continuo si el dispositivo lo soporta — no es parte del tipo
+      // estándar de TS (es una extensión de la Image Capture API, disponible
+      // en Chrome/Android), de ahí el cast. Sin esto algunos teléfonos dejan
+      // el enfoque fijo en lo último que enfocaron antes de abrir la cámara
+      // (ej. algo lejano), y una foto de un código de cerca sale borrosa
+      // aunque el usuario no mueva la mano — seguirá enfocando mientras
+      // escanea en vez de solo una vez al abrir. Envuelto en try/catch
+      // porque applyConstraints puede rechazar en dispositivos que anuncian
+      // el modo en getCapabilities() pero no lo aceptan en la práctica.
+      if (capabilities?.focusMode?.includes("continuous")) {
+        try {
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] });
+        } catch {
+          // sin soporte real pese a anunciarlo — seguir con el enfoque que ya tenga
+        }
+      }
 
       if (window.BarcodeDetector) {
         const detector = new window.BarcodeDetector({ formats: SUPPORTED_FORMATS });
