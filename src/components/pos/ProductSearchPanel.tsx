@@ -22,6 +22,14 @@ export function ProductSearchPanel({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    // El POS ahora se queda en la misma pantalla tras una venta (no navega al
+    // ticket), así que router.refresh() es la única forma de refrescar el
+    // stock mostrado aquí. Solo aplica cuando no hay una búsqueda activa,
+    // para no pisar resultados de búsqueda con la lista por defecto.
+    if (query.trim() === "") setProducts(initialProducts);
+  }, [initialProducts, query]);
+
+  useEffect(() => {
     const handle = setTimeout(() => {
       startTransition(async () => {
         setProducts(await searchProductsForPos(query));

@@ -251,7 +251,13 @@ export function PosClient({
         sale={saleSuccess}
         businessName={businessName}
         businessWhatsapp={businessWhatsapp}
-        onContinue={() => setSaleSuccess(null)}
+        onContinue={() => {
+          setSaleSuccess(null);
+          // La venta recién hecha dejó stock desactualizado en el panel de
+          // productos (initialProducts no se vuelve a pedir solo) — sin esto
+          // el cajero podría intentar vender un producto que ya se agotó.
+          router.refresh();
+        }}
         onViewTicket={() => {
           if (saleSuccess) router.push(`/ventas/${saleSuccess.saleId}/ticket`);
           setSaleSuccess(null);

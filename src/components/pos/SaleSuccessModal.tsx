@@ -42,6 +42,8 @@ export function SaleSuccessModal({
       ticketLabel: sale.ticketLabel,
       items: sale.items,
       total: sale.total,
+      ticketUrl:
+        typeof window !== "undefined" ? `${window.location.origin}/ventas/${sale.saleId}/ticket` : undefined,
     });
     window.open(buildWhatsappLink(message, businessWhatsapp), "_blank");
   };
