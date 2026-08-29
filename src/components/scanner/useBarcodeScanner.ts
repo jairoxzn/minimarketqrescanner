@@ -129,6 +129,15 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         //    is the dominant reason this felt slow, not the format list.
         //    Dropped to 80ms (~12 attempts/second) for a snappier feel
         //    without pegging the CPU.
+        // No TRY_HARDER: with POSSIBLE_FORMATS set, MultiFormatReader.setHints()
+        // (see node_modules/@zxing/library/esm/core/MultiFormatReader.js) only
+        // pushes the 1D reader *before* QRCodeReader when tryHarder is falsy —
+        // with it on, 1D gets pushed last, so every frame would probe for a QR
+        // finder pattern before ever trying EAN/UPC/Code128, working against
+        // the dominant use case this fix targets. TRY_HARDER's other upside
+        // (more scanlines per attempt, rotation handling — see OneDReader.js)
+        // is worth less than that ordering cost now that attempts run ~6x more
+        // often; the extra attempts cover for single-frame thoroughness.
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [
           BarcodeFormat.EAN_13,
@@ -138,11 +147,17 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
           BarcodeFormat.CODE_128,
           BarcodeFormat.QR_CODE,
         ]);
-        hints.set(DecodeHintType.TRY_HARDER, true);
 
         const reader = new BrowserMultiFormatReader(hints, {
           delayBetweenScanAttempts: 80,
-          delayBetweenScanSuccess: DETECTION_DEBOUNCE_MS,
+          // NOT DETECTION_DEBOUNCE_MS — that already lives in emit() as a
+          // per-code dedup (lines above). This library option instead gates
+          // the *next decode attempt* after ANY successful read, matching
+          // delayBetweenScanAttempts keeps it from also blocking a second,
+          // different code scanned shortly after the first — the native
+          // BarcodeDetector path (rAF loop, no such gate) has no equivalent
+          // restriction, so this keeps both paths behaving the same way.
+          delayBetweenScanSuccess: 80,
         });
         const controls = await reader.decodeFromVideoElement(videoRef.current, (result) => {
           if (result) emit(result.getText());
