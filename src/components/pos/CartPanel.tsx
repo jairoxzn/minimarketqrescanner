@@ -41,6 +41,13 @@ export function CartPanel({
         )}
         {lines.map((line) => (
           <div key={line.productId} className="flex items-center gap-2 rounded-lg border border-border p-2.5">
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-background overflow-hidden flex items-center justify-center text-muted text-xs font-semibold">
+              {line.imageUrl ? (
+                <img src={line.imageUrl} alt={line.name} className="h-full w-full object-cover" />
+              ) : (
+                line.name.charAt(0).toUpperCase()
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{line.name}</p>
               <p className="text-xs text-muted">{formatMoney(line.unitPrice)} c/u</p>

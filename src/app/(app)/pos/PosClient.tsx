@@ -12,6 +12,7 @@ import { ProductSearchPanel } from "@/components/pos/ProductSearchPanel";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { PaymentModal } from "@/components/pos/PaymentModal";
 import { QuickAddCustomerModal } from "@/components/pos/QuickAddCustomerModal";
+import { SaleSuccessModal, type SaleSuccessData } from "@/components/pos/SaleSuccessModal";
 import { ScannerModal } from "@/components/scanner/ScannerModal";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -30,11 +31,15 @@ export function PosClient({
   initialCustomers,
   paymentMethods,
   registerStatus,
+  businessName,
+  businessWhatsapp,
 }: {
   initialProducts: Product[];
   initialCustomers: Customer[];
   paymentMethods: PaymentMethod[];
   registerStatus: RegisterStatus;
+  businessName: string;
+  businessWhatsapp: string | null;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -59,6 +64,7 @@ export function PosClient({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saleSuccess, setSaleSuccess] = useState<SaleSuccessData | null>(null);
 
   const addProduct = (product: Product) => {
     setLines((prev) => {
@@ -80,6 +86,7 @@ export function PosClient({
           stock: product.stock,
           quantity: 1,
           discount: 0,
+          imageUrl: product.imageUrl,
         },
       ];
     });
@@ -122,12 +129,17 @@ export function PosClient({
         payments: [{ paymentMethodId, amount: total }],
         amountReceived,
       });
-      toast.success(`Venta ${formatTicketLabel(sale.ticketSeries, sale.ticketNumber)} registrada correctamente`);
       setLines([]);
       setDiscount(0);
       setPaymentOpen(false);
       setMobileCartOpen(false);
-      router.push(`/ventas/${sale.id}/ticket`);
+      setSaleSuccess({
+        saleId: sale.id,
+        ticketLabel: formatTicketLabel(sale.ticketSeries, sale.ticketNumber),
+        total: Number(sale.total),
+        changeAmount: sale.changeAmount != null ? Number(sale.changeAmount) : null,
+        items: sale.items.map((i) => ({ name: i.productName, quantity: i.quantity, subtotal: Number(i.subtotal) })),
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al registrar la venta");
     } finally {
@@ -231,6 +243,18 @@ export function PosClient({
         onCreated={(customer) => {
           setCustomers((prev) => [...prev, customer]);
           setCustomerId(customer.id);
+        }}
+      />
+
+      <SaleSuccessModal
+        open={!!saleSuccess}
+        sale={saleSuccess}
+        businessName={businessName}
+        businessWhatsapp={businessWhatsapp}
+        onContinue={() => setSaleSuccess(null)}
+        onViewTicket={() => {
+          if (saleSuccess) router.push(`/ventas/${saleSuccess.saleId}/ticket`);
+          setSaleSuccess(null);
         }}
       />
     </div>

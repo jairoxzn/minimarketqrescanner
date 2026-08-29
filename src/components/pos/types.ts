@@ -6,4 +6,5 @@ export interface CartLine {
   stock: number;
   quantity: number;
   discount: number;
+  imageUrl: string | null;
 }
