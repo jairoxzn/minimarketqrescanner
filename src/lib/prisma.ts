@@ -1,9 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { requireEnv } from "@/lib/env";
 
-// Runtime queries go through Neon's pooled connection (PgBouncer) — the
-// direct/unpooled URL is reserved for Prisma CLI migrations (see prisma.config.ts).
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+// Runtime queries go through Neon's pooled connection (PgBouncer) — la
+// conexión directa/unpooled queda reservada para el CLI de Prisma en
+// migraciones (ver prisma.config.ts). requireEnv() falla con un mensaje
+// claro en los logs del servidor si esto falta, en vez de un error críptico
+// de conexión más adelante.
+const adapter = new PrismaPg({ connectionString: requireEnv("DATABASE_URL") });
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

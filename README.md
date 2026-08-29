@@ -25,6 +25,12 @@ Genera `NEXTAUTH_SECRET` con:
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
+### Desplegando en Vercel (u otro host)
+
+`.env` está en `.gitignore` a propósito — nunca se sube. Hay que configurar las variables de entorno manualmente en el dashboard del host (Vercel: Project Settings → Environment Variables → `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_URL`), marcarlas para Production (y Preview/Development si corresponde), y **volver a desplegar** — agregarlas no aplica a un build ya hecho.
+
+Si ves en el navegador `[next-auth][error][CLIENT_FETCH_ERROR] "Unexpected token '<'... is not valid JSON"`: significa que `/api/auth/session` devolvió una página de error HTML en vez de JSON, casi siempre porque falta una variable de entorno en el servidor. `src/lib/prisma.ts` usa `requireEnv()` (`src/lib/env.ts`) precisamente para que esto falle con un mensaje claro (`Falta la variable de entorno "DATABASE_URL"...`) en los **logs del servidor** (Vercel → el proyecto → pestaña Logs) en vez de un error críptico — revisa ahí primero. `NEXTAUTH_URL` y `NEXT_PUBLIC_APP_URL` deben ser la URL real del deploy, no `http://localhost:3000`.
+
 ## Usuario administrador de prueba (sembrado)
 
 ```
