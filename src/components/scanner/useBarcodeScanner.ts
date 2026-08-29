@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { computeRoi, scanCroppedVideo, ROI_OUTPUT_SIZE } from "./roiScan";
 
 export type ScannerState =
   | "idle"
@@ -129,11 +130,23 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
 
       if (window.BarcodeDetector) {
         const detector = new window.BarcodeDetector({ formats: SUPPORTED_FORMATS });
+        // Recortamos al mismo recuadro que ve el usuario antes de detectar,
+        // en vez de pasarle el frame completo a detect() — ver roiScan.ts.
+        // BarcodeDetector acepta un canvas igual que un <video>, así que
+        // basta con dibujar el recorte en uno propio en cada tick.
+        const roiCanvas = document.createElement("canvas");
+        const roiCtx = roiCanvas.getContext("2d", { willReadFrequently: true }) ?? roiCanvas.getContext("2d");
         const tick = async () => {
-          if (!videoRef.current) return;
+          if (!videoRef.current || !roiCtx) return;
           try {
-            const results = await detector.detect(videoRef.current);
-            if (results[0]) emit(results[0].rawValue);
+            const { sx, sy, sSize } = computeRoi(videoRef.current);
+            if (sSize > 0) {
+              roiCanvas.width = ROI_OUTPUT_SIZE;
+              roiCanvas.height = ROI_OUTPUT_SIZE;
+              roiCtx.drawImage(videoRef.current, sx, sy, sSize, sSize, 0, 0, ROI_OUTPUT_SIZE, ROI_OUTPUT_SIZE);
+              const results = await detector.detect(roiCanvas);
+              if (results[0]) emit(results[0].rawValue);
+            }
           } catch {
             // ignore transient detection errors, keep scanning
           }
@@ -146,7 +159,7 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         // available there — and Safari/iOS).
         const [
           { BrowserMultiFormatOneDReader, BrowserQRCodeReader },
-          { DecodeHintType, BarcodeFormat },
+          { DecodeHintType, BarcodeFormat, NotFoundException, ChecksumException, FormatException },
         ] = await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
 
         // Two dedicated readers run concurrently against the same video
@@ -177,44 +190,25 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         ]);
         oneDHints.set(DecodeHintType.TRY_HARDER, true);
 
-        // The library's own default delay between decode attempts is 500ms
-        // (@zxing/browser's BrowserCodeReader default) — a hard floor of 2
-        // attempts/second regardless of camera frame rate. Dropped to 80ms
-        // (~12/sec) on both readers for a snappier feel without pegging the
-        // CPU. delayBetweenScanSuccess also set to 80ms rather than the
-        // detection debounce (that dedup already lives in emit() above) —
-        // the library option gates the *next attempt after any success*,
-        // and a longer value here would block detecting a second, different
-        // code shortly after the first, unlike the native BarcodeDetector
-        // path (rAF loop, no such gate).
-        const scanOptions = { delayBetweenScanAttempts: 80, delayBetweenScanSuccess: 80 };
+        const oneDReader = new BrowserMultiFormatOneDReader(oneDHints);
+        const qrReader = new BrowserQRCodeReader();
+        const exceptions = { NotFoundException, ChecksumException, FormatException };
 
-        const oneDReader = new BrowserMultiFormatOneDReader(oneDHints, scanOptions);
-        const qrReader = new BrowserQRCodeReader(undefined, scanOptions);
-        const onResult = (result: { getText(): string } | undefined) => {
-          if (result) emit(result.getText());
-        };
-
-        // Promise.all would reject as soon as either decodeFromVideoElement()
-        // call rejects, without ever exposing the controls of the other call
-        // that already resolved — decodeFromVideoElement() starts that
-        // reader's own setTimeout-based decode loop as soon as it resolves,
-        // so a rejection on one side (e.g. the 3s "canplay" wait in
-        // playVideoOnLoadAsync timing out during a camera hiccup) would leave
-        // the *other* reader's loop running with no controls captured to
-        // stop() it — a permanent per-frame decode loop leaking after the
-        // modal closes. allSettled captures every controls object that did
-        // resolve before deciding whether to report an error, so stop() can
-        // always reach anything that got started.
-        const settled = await Promise.allSettled([
-          oneDReader.decodeFromVideoElement(videoRef.current, onResult),
-          qrReader.decodeFromVideoElement(videoRef.current, onResult),
-        ]);
-        zxingControlsRef.current = settled
-          .filter((r) => r.status === "fulfilled")
-          .map((r) => (r as PromiseFulfilledResult<{ stop: () => void }>).value);
-        const rejected = settled.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
-        if (rejected) throw rejected.reason;
+        // Bucle propio (roiScan.ts) en vez de decodeFromVideoElement(), por
+        // dos motivos: (1) recorta cada frame al recuadro del visor — ver el
+        // comentario en roiScan.ts — y (2) al no depender de la espera
+        // interna por el evento "canplay" del video (ya está reproduciéndose
+        // en este punto), arranca de forma síncrona, así que a diferencia
+        // del intento anterior con Promise.allSettled ya no existe ninguna
+        // promesa que pueda rechazar a medio camino y dejar sin controles
+        // capturados al lector que sí arrancó.
+        //
+        // El intervalo de 80ms (en vez del default de la librería, 500ms —
+        // un piso de 2 intentos/seg sin importar el frame rate de la cámara)
+        // sigue aplicando vía el 5to parámetro de scanCroppedVideo.
+        const oneDControls = scanCroppedVideo(oneDReader, videoRef.current, emit, exceptions, 80);
+        const qrControls = scanCroppedVideo(qrReader, videoRef.current, emit, exceptions, 80);
+        zxingControlsRef.current = [oneDControls, qrControls];
       }
     } catch (err) {
       if (err instanceof DOMException) {

@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useBarcodeScanner } from "./useBarcodeScanner";
+import { ROI_MARGIN_RATIO } from "./roiScan";
 
 export function ScannerModal({
   open,
@@ -43,7 +44,13 @@ export function ScannerModal({
         <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-black">
           <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
           {state === "scanning" && (
-            <div className="absolute inset-8 border-2 border-white/70 rounded-lg pointer-events-none" />
+            // El % debe coincidir con ROI_MARGIN_RATIO (roiScan.ts) — ese es
+            // el recuadro que de verdad se recorta y decodifica en cada
+            // frame, ya no es solo decorativo.
+            <div
+              className="absolute border-2 border-white/70 rounded-lg pointer-events-none"
+              style={{ inset: `${ROI_MARGIN_RATIO * 100}%` }}
+            />
           )}
           {state === "requesting-permission" && (
             <div className="absolute inset-0 flex items-center justify-center text-white text-sm">
