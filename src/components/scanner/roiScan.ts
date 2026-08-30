@@ -11,13 +11,16 @@
  *    menos (ej. ~17-60ms recortado vs ~45-125ms con el frame completo en el
  *    mismo caso), sin fallar en ningún caso donde el frame completo sí
  *    decodificaba.
- * 2. Costo acotado sin importar la cámara: el tamaño de salida es fijo
- *    (ROI_OUTPUT_SIZE), así que el costo por intento no depende de qué
- *    resolución nativa termine dando la cámara del dispositivo — la
- *    resolución de captura ("ideal" en getUserMedia) es solo una preferencia,
- *    no una garantía, y sin este tope un dispositivo con cámara de más
- *    resolución de la pedida pagaría un costo de decodificación más alto por
- *    cada intento sin que el código lo pueda controlar.
+ * 2. Costo acotado por arriba sin importar la cámara: el tamaño de salida
+ *    nunca pasa de ROI_OUTPUT_SIZE, así que un dispositivo con cámara de más
+ *    resolución de la pedida ("ideal" en getUserMedia es solo una
+ *    preferencia, no una garantía) no paga un costo de decodificación más
+ *    alto por eso. Por abajo NO se agranda a la fuerza — un recorte más
+ *    chico que ROI_OUTPUT_SIZE (cámara de baja resolución) se decodifica a
+ *    su tamaño real; forzarlo a 1000px sería solo interpolar relleno sin
+ *    detalle real y volvería cada intento más lento en vez de más barato,
+ *    justo en los dispositivos donde la velocidad de decodificación más
+ *    importa.
  * 3. El recuadro visual deja de ser decorativo — antes se le pedía al
  *    usuario apuntar el código dentro de esa caja pero en realidad se
  *    decodificaba el frame entero sin recortar.
@@ -52,6 +55,35 @@ export function computeRoi(video: HTMLVideoElement) {
   };
 }
 
+/**
+ * Crea el canvas de destino una sola vez, con el tamaño ya resuelto (nunca
+ * más que ROI_OUTPUT_SIZE, nunca forzado hacia arriba si el recorte nativo
+ * es más chico). Reasignar canvas.width/height limpia el bitmap y reinicia
+ * el estado del contexto 2D según el spec — hacerlo en cada intento de
+ * decodificación (cada ~80ms, x2 lectores) era trabajo repetido evitable en
+ * el bucle más caliente del escáner.
+ */
+export function createRoiCanvas(video: HTMLVideoElement): HTMLCanvasElement {
+  const { sSize } = computeRoi(video);
+  const size = Math.min(ROI_OUTPUT_SIZE, sSize);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  return canvas;
+}
+
+/** Recorta el frame actual del video y lo dibuja en un canvas ya dimensionado (ver createRoiCanvas). */
+export function drawRoiFrame(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D
+): boolean {
+  const { sx, sy, sSize } = computeRoi(video);
+  if (sSize <= 0) return false;
+  ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, canvas.width, canvas.height);
+  return true;
+}
+
 interface CroppedReader {
   decodeFromCanvas(canvas: HTMLCanvasElement): { getText(): string };
 }
@@ -78,18 +110,14 @@ export function scanCroppedVideo(
   exceptions: ZxingExceptions,
   delayMs = 80
 ): { stop: () => void } {
-  const canvas = document.createElement("canvas");
+  const canvas = createRoiCanvas(video);
   const ctx = canvas.getContext("2d", { willReadFrequently: true }) ?? canvas.getContext("2d");
   let stopped = false;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const loop = () => {
     if (stopped || !ctx) return;
-    const { sx, sy, sSize } = computeRoi(video);
-    if (sSize > 0) {
-      canvas.width = ROI_OUTPUT_SIZE;
-      canvas.height = ROI_OUTPUT_SIZE;
-      ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, ROI_OUTPUT_SIZE, ROI_OUTPUT_SIZE);
+    if (drawRoiFrame(video, canvas, ctx)) {
       try {
         const result = reader.decodeFromCanvas(canvas);
         onResult(result.getText());

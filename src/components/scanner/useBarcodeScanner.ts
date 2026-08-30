@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { computeRoi, scanCroppedVideo, ROI_OUTPUT_SIZE } from "./roiScan";
+import { createRoiCanvas, drawRoiFrame, scanCroppedVideo } from "./roiScan";
 
 export type ScannerState =
   | "idle"
@@ -35,6 +35,11 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
   const rafRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<{ code: string; at: number } | null>(null);
   const zxingControlsRef = useRef<{ stop: () => void }[]>([]);
+  // La ruta nativa (BarcodeDetector) hace await detect() dentro de tick() —
+  // cancelAnimationFrame por sí solo no interrumpe un tick ya en curso, así
+  // que sin esta bandera un cierre justo durante un detect() en vuelo podía
+  // emitir una detección y reprogramar otro rAF después de stop().
+  const activeRef = useRef(false);
 
   const emit = useCallback(
     (code: string) => {
@@ -48,6 +53,7 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
   );
 
   const stop = useCallback(() => {
+    activeRef.current = false;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
     zxingControlsRef.current.forEach((controls) => controls.stop());
@@ -128,29 +134,34 @@ export function useBarcodeScanner(onDetected: (code: string) => void) {
         }
       }
 
+      activeRef.current = true;
+
       if (window.BarcodeDetector) {
         const detector = new window.BarcodeDetector({ formats: SUPPORTED_FORMATS });
         // Recortamos al mismo recuadro que ve el usuario antes de detectar,
         // en vez de pasarle el frame completo a detect() — ver roiScan.ts.
         // BarcodeDetector acepta un canvas igual que un <video>, así que
-        // basta con dibujar el recorte en uno propio en cada tick.
-        const roiCanvas = document.createElement("canvas");
+        // basta con dibujar el recorte en uno propio en cada tick. El canvas
+        // se crea y dimensiona una sola vez (createRoiCanvas), no en cada
+        // tick — ver el comentario de esa función.
+        const roiCanvas = createRoiCanvas(videoRef.current);
         const roiCtx = roiCanvas.getContext("2d", { willReadFrequently: true }) ?? roiCanvas.getContext("2d");
         const tick = async () => {
-          if (!videoRef.current || !roiCtx) return;
+          if (!activeRef.current || !videoRef.current || !roiCtx) return;
           try {
-            const { sx, sy, sSize } = computeRoi(videoRef.current);
-            if (sSize > 0) {
-              roiCanvas.width = ROI_OUTPUT_SIZE;
-              roiCanvas.height = ROI_OUTPUT_SIZE;
-              roiCtx.drawImage(videoRef.current, sx, sy, sSize, sSize, 0, 0, ROI_OUTPUT_SIZE, ROI_OUTPUT_SIZE);
+            if (drawRoiFrame(videoRef.current, roiCanvas, roiCtx)) {
               const results = await detector.detect(roiCanvas);
+              // stop() puede haber corrido mientras detect() estaba en
+              // vuelo — sin este chequeo, una detección tardía se emitía y
+              // se reprogramaba otro rAF después de que el escáner ya se
+              // había cerrado.
+              if (!activeRef.current) return;
               if (results[0]) emit(results[0].rawValue);
             }
           } catch {
             // ignore transient detection errors, keep scanning
           }
-          rafRef.current = requestAnimationFrame(tick);
+          if (activeRef.current) rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
       } else {
