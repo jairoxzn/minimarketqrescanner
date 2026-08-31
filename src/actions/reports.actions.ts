@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { round2 } from "@/lib/money";
+import { classifyStock } from "@/lib/stock";
 
 export interface ReportDateRange {
   dateFrom?: string;
@@ -92,8 +93,7 @@ export async function getProductsReport() {
   const menosVendidos = [...ranked].sort((a, b) => a.quantity - b.quantity).slice(0, 10);
   const gananciaTotal = round2(ranked.reduce((sum, r) => sum + r.profit, 0));
 
-  const agotados = products.filter((p) => p.stock <= 0);
-  const stockBajo = products.filter((p) => p.stock > 0 && p.stock <= p.minStock);
+  const { outOfStock: agotados, lowStock: stockBajo } = classifyStock(products);
 
   return {
     masVendidos,

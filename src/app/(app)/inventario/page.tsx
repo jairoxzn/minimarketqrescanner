@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/Button";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody } from "@/components/ui/Card";
+import { classifyStock } from "@/lib/stock";
 
 export default async function InventarioPage() {
   const products = await listInventoryOverview();
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock);
-  const outOfStock = products.filter((p) => p.stock <= 0);
+  const { outOfStock, lowStock } = classifyStock(products);
 
   return (
     <div className="flex flex-col gap-4">

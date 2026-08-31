@@ -7,6 +7,7 @@ import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import { serializeDecimals } from "@/lib/serialize";
+import { classifyStock } from "@/lib/stock";
 import { productSchema, productImportRowSchema, type ProductInput, type ProductImportRow } from "@/lib/validations/product.schema";
 
 export interface ProductFilters {
@@ -40,11 +41,9 @@ export async function listProducts(filters: ProductFilters = {}) {
     orderBy: { name: "asc" },
   });
 
-  if (filters.stockLevel === "low") {
-    return serializeDecimals(products.filter((p) => p.stock > 0 && p.stock <= p.minStock));
-  }
-  if (filters.stockLevel === "out") {
-    return serializeDecimals(products.filter((p) => p.stock <= 0));
+  if (filters.stockLevel === "low" || filters.stockLevel === "out") {
+    const { outOfStock, lowStock } = classifyStock(products);
+    return serializeDecimals(filters.stockLevel === "low" ? lowStock : outOfStock);
   }
   return serializeDecimals(products);
 }

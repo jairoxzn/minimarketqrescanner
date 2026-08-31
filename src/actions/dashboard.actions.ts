@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/session";
 import { requirePermission } from "@/lib/permissions";
 import { round2 } from "@/lib/money";
 import { startOfDayLima, formatDateShort } from "@/lib/date";
+import { classifyStock } from "@/lib/stock";
 
 export async function getDashboardData() {
   const session = requirePermission(await getCurrentSession(), "dashboard.view");
@@ -56,8 +57,7 @@ export async function getDashboardData() {
 
   const productosVendidosMes = salesMonth.reduce((sum, s) => sum + s.items.reduce((isum, i) => isum + i.quantity, 0), 0);
 
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock);
-  const outOfStock = products.filter((p) => p.stock <= 0);
+  const { outOfStock, lowStock } = classifyStock(products);
 
   const salesByDay = Array.from({ length: 7 }, (_, idx) => {
     const dayDate = new Date(todayStart);
