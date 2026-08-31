@@ -59,11 +59,11 @@ export function AjusteForm({ products }: { products: ProductOption[] }) {
     <Card>
       <CardBody>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex gap-2">
-            <Button type="button" variant={mode === "ENTRADA" ? "primary" : "secondary"} onClick={() => setMode("ENTRADA")} className="flex-1">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant={mode === "ENTRADA" ? "primary" : "secondary"} onClick={() => setMode("ENTRADA")} className="flex-1 min-w-[10rem]">
               Entrada de mercadería
             </Button>
-            <Button type="button" variant={mode === "AJUSTE" ? "primary" : "secondary"} onClick={() => setMode("AJUSTE")} className="flex-1">
+            <Button type="button" variant={mode === "AJUSTE" ? "primary" : "secondary"} onClick={() => setMode("AJUSTE")} className="flex-1 min-w-[10rem]">
               Ajuste (conteo físico)
             </Button>
           </div>

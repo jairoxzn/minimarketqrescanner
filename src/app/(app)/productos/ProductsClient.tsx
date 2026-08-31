@@ -86,7 +86,7 @@ export function ProductsClient({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Productos</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={handleExport}>⬇ Exportar</Button>
           <Link href="/productos/importar"><Button variant="secondary">⬆ Importar</Button></Link>
           <Link href="/productos/nuevo"><Button>+ Nuevo producto</Button></Link>

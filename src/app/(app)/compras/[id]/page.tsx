@@ -28,7 +28,7 @@ export default async function CompraDetailPage({ params }: { params: Promise<{ i
           <h1 className="text-xl font-bold text-foreground">Compra — {purchase.supplier.name}</h1>
           <Badge tone={STATUS_TONE[purchase.status]}>{STATUS_LABEL[purchase.status]}</Badge>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <PurchaseActions purchaseId={purchase.id} status={purchase.status} />
           <Link href="/compras"><Button variant="secondary">Volver</Button></Link>
         </div>

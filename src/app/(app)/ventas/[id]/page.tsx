@@ -26,7 +26,7 @@ export default async function VentaDetailPage({ params }: { params: Promise<{ id
           <h1 className="text-xl font-bold text-foreground">Venta {ticketLabel}</h1>
           <Badge tone={sale.status === "ACTIVE" ? "success" : "danger"}>{sale.status === "ACTIVE" ? "Activa" : "Anulada"}</Badge>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/ventas/${sale.id}/ticket`}><Button variant="secondary">🖨️ Ver / Reimprimir ticket</Button></Link>
           {sale.status === "ACTIVE" && <Link href={`/devoluciones/nueva?saleId=${sale.id}`}><Button variant="secondary">↩️ Registrar devolución</Button></Link>}
           {isAdmin && sale.status === "ACTIVE" && <VoidSaleButton saleId={sale.id} />}

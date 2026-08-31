@@ -40,7 +40,7 @@ export function ComprasClient({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Compras</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/proveedores"><Button variant="secondary">Proveedores</Button></Link>
           <Link href="/compras/nueva"><Button>+ Nueva compra</Button></Link>
         </div>

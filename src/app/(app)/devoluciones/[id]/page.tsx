@@ -15,9 +15,9 @@ export default async function DevolucionDetailPage({ params }: { params: Promise
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Devolución</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/ventas/${ret.saleId}`}><Button variant="secondary">Ver venta original</Button></Link>
           <Link href="/devoluciones"><Button variant="secondary">Volver</Button></Link>
         </div>

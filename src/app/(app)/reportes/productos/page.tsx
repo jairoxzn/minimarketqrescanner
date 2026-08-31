@@ -14,7 +14,7 @@ export default async function ReporteProductosPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Reporte de productos y ganancias</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/reportes/ventas"><Button variant="secondary">Ver reporte de ventas</Button></Link>
           <ExportProductsReportButtons report={report} />
         </div>

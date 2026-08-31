@@ -50,7 +50,7 @@ export function CajaClient({ initial }: { initial: CurrentRegister }) {
           🟢 Caja abierta por <strong>{register.openedBy.name}</strong> el{" "}
           <span suppressHydrationWarning>{formatDateTime(register.openedAt)}</span>
         </span>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setMovementModalOpen(true)}>+ Ingreso / Egreso / Retiro</Button>
           <Button size="sm" variant="danger" onClick={() => setCloseModalOpen(true)}>Cerrar caja</Button>
         </div>

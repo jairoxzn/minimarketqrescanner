@@ -51,7 +51,7 @@ export function VentasReportClient({ initialReport }: { initialReport: Report })
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Reporte de ventas</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/reportes/productos"><Button variant="secondary">Ver reporte de productos</Button></Link>
           <Button variant="secondary" onClick={handleExportExcel}>⬇ Excel</Button>
           <Button variant="secondary" onClick={handleExportPdf}>⬇ PDF</Button>

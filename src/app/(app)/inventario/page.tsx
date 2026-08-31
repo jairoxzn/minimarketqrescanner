@@ -14,7 +14,7 @@ export default async function InventarioPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-foreground">Inventario</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/inventario/movimientos"><Button variant="secondary">Ver movimientos</Button></Link>
           <Link href="/inventario/ajuste"><Button>+ Entrada / Ajuste</Button></Link>
         </div>
