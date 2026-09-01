@@ -37,11 +37,11 @@ export const config = {
   matcher: [
     /*
      * Match all routes except:
-     * - /login, /forgot-password, /reset-password (public auth pages)
+     * - /login (public auth page)
      * - /api/auth (NextAuth internal routes)
      * - /_next (Next.js internals)
      * - static files (favicon, images, etc.)
      */
-    "/((?!login|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)",
   ],
 };

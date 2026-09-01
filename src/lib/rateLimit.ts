@@ -1,15 +1,14 @@
 /**
  * Rate limiter en memoria, por proceso — sin infraestructura nueva (Redis/Upstash)
  * a propósito, siguiendo el mismo criterio que el resto del MVP (ver README:
- * fallback de SMTP, reset de contraseña asistido por admin, etc.).
+ * reset de contraseña asistido por admin en vez de flujo por correo, etc.).
  *
  * Limitación conocida: se reinicia al reiniciar el servidor y NO se comparte
  * entre instancias si el proceso escala horizontalmente. Para eso, cambiar
  * este módulo por un backend compartido (Redis) sin tocar los call sites.
  *
- * Solo cuenta intentos FALLIDOS (o el evento explícito que se quiera limitar,
- * ej. cada solicitud de recuperación de contraseña) — un usuario legítimo que
- * acierta la contraseña nunca debe acercarse al límite.
+ * Solo cuenta intentos FALLIDOS (o el evento explícito que se quiera limitar)
+ * — un usuario legítimo que acierta la contraseña nunca debe acercarse al límite.
  */
 
 interface Bucket {

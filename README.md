@@ -27,9 +27,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### Desplegando en Vercel (u otro host)
 
-`.env` está en `.gitignore` a propósito — nunca se sube. Hay que configurar las variables de entorno manualmente en el dashboard del host (Vercel: Project Settings → Environment Variables → `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_URL`), marcarlas para Production (y Preview/Development si corresponde), y **volver a desplegar** — agregarlas no aplica a un build ya hecho.
+`.env` está en `.gitignore` a propósito — nunca se sube. Hay que configurar las variables de entorno manualmente en el dashboard del host (Vercel: Project Settings → Environment Variables → `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`), marcarlas para Production (y Preview/Development si corresponde), y **volver a desplegar** — agregarlas no aplica a un build ya hecho.
 
-Si ves en el navegador `[next-auth][error][CLIENT_FETCH_ERROR] "Unexpected token '<'... is not valid JSON"`: significa que `/api/auth/session` devolvió una página de error HTML en vez de JSON, casi siempre porque falta una variable de entorno en el servidor. `src/lib/prisma.ts` usa `requireEnv()` (`src/lib/env.ts`) precisamente para que esto falle con un mensaje claro (`Falta la variable de entorno "DATABASE_URL"...`) en los **logs del servidor** (Vercel → el proyecto → pestaña Logs) en vez de un error críptico — revisa ahí primero. `NEXTAUTH_URL` y `NEXT_PUBLIC_APP_URL` deben ser la URL real del deploy, no `http://localhost:3000`.
+Si ves en el navegador `[next-auth][error][CLIENT_FETCH_ERROR] "Unexpected token '<'... is not valid JSON"`: significa que `/api/auth/session` devolvió una página de error HTML en vez de JSON, casi siempre porque falta una variable de entorno en el servidor. `src/lib/prisma.ts` usa `requireEnv()` (`src/lib/env.ts`) precisamente para que esto falle con un mensaje claro (`Falta la variable de entorno "DATABASE_URL"...`) en los **logs del servidor** (Vercel → el proyecto → pestaña Logs) en vez de un error críptico — revisa ahí primero. `NEXTAUTH_URL` debe ser la URL real del deploy, no `http://localhost:3000`.
 
 ## Usuario administrador de prueba (sembrado)
 
@@ -60,7 +60,7 @@ La autorización real vive en `src/lib/permissions.ts` y se re-verifica dentro d
 | Protección SQL Injection | ✅ Prisma parametriza todo, incluso los `$queryRaw` con guardas de stock |
 | Protección XSS | ✅ React escapa por defecto; sin `dangerouslySetInnerHTML` en el código |
 | Protección CSRF | ✅ provista por Next.js Server Actions (verificación de `Origin`) |
-| **Rate limiting** | ✅ Login: 5 intentos fallidos / 15 min por correo (`src/lib/rateLimit.ts`). Recuperar contraseña: 3 solicitudes/hora por correo. En memoria, por proceso — ver limitación documentada en el archivo si el sistema llega a escalar horizontalmente. |
+| **Rate limiting** | ✅ Login: 5 intentos fallidos / 15 min por correo (`src/lib/rateLimit.ts`). En memoria, por proceso — ver limitación documentada en el archivo si el sistema llega a escalar horizontalmente. |
 | Auditoría | ✅ Se registra en cada acción importante (`AuditLog`) **y ahora tiene visor** en `/auditoria` (solo Admin): filtros por usuario/acción/fecha. |
 
 ## Alcance de este MVP
@@ -87,7 +87,7 @@ Verificado además con una cámara simulada (feed de video real, no una imagen e
 
 - **NextAuth v4** (estable) en vez de v5/Auth.js (aún en beta).
 - **Imagen de producto**: se sube como archivo, se comprime y redimensiona en el navegador (máx. 640px, JPEG ~75% calidad) antes de guardarse como base64 en la base de datos — mismo criterio sin-storage-externo que el QR de métodos de pago, pero con compresión porque una foto de celular sin comprimir sí volvería pesadas las listas de productos y el POS. Se muestra como miniatura en `/productos` y en las tarjetas de búsqueda del POS.
-- **Recuperar contraseña**: el flujo por token existe (`/forgot-password`, `/reset-password/[token]`), pero sin `SMTP_*` configurado el enlace solo se registra en la consola del servidor. El camino práctico en el MVP es que un administrador restablezca la contraseña desde `/usuarios`.
+- **Recuperar contraseña**: no hay flujo de autoservicio por correo (requeriría configurar `SMTP_*`, fuera de alcance). Un administrador restablece la contraseña de cualquier usuario desde `/usuarios`.
 - **Stock negativo bloqueado por defecto** (`Business.allowNegativeStock`, configurable en `/configuracion`).
 - **Precios con IGV incluido por defecto** (`igvIncluded = true`), configurable.
 - Toda tabla de negocio lleva `businessId` (preparado para multiempresa a futuro) aunque el MVP siembra un solo `Business`.
@@ -99,7 +99,7 @@ Verificado además con una cámara simulada (feed de video real, no una imagen e
 prisma/schema.prisma      Esquema completo (ver plan de implementación)
 prisma/seed.ts             Negocio demo, admin, Cliente General, métodos de pago, catálogo de ejemplo
 src/actions/                Server Actions (una por dominio) — mutaciones + queries autorizadas
-src/app/(auth)/              Login, recuperar/restablecer contraseña
+src/app/(auth)/              Login
 src/app/(app)/                Todo el panel autenticado (sidebar + bottom nav)
 src/app/(print)/               Ruta de ticket sin chrome de la app, para imprimir/compartir
 src/components/              UI kit, POS, escáner, gráficos, tickets

@@ -116,7 +116,6 @@ model User {
   voidedSales         Sale[]               @relation("SaleVoidedBy")
   inventoryMovements  InventoryMovement[]
   auditLogs           AuditLog[]
-  passwordResetTokens PasswordResetToken[]
   cashRegistersOpened CashRegister[]       @relation("CashRegisterOpenedBy")
   cashRegistersClosed CashRegister[]       @relation("CashRegisterClosedBy")
   cashMovements       CashMovement[]
@@ -126,18 +125,6 @@ model User {
 
   @@index([businessId])
   @@map("users")
-}
-
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  token     String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@map("password_reset_tokens")
 }
 
 model Category {

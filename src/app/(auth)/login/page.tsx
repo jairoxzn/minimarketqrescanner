@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth.schema";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -81,10 +80,6 @@ function LoginForm() {
           <Button type="submit" isLoading={isSubmitting} className="w-full mt-2">
             Iniciar sesión
           </Button>
-
-          <Link href="/forgot-password" className="text-sm text-primary text-center hover:underline">
-            ¿Olvidaste tu contraseña?
-          </Link>
         </form>
       </CardBody>
     </Card>
